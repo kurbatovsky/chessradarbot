@@ -40,3 +40,13 @@ class Tournament(Base):
     currency = Column(String, nullable=True)
     last_seen_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class SourceConfig(Base):
+    __tablename__ = "source_configs"
+
+    id = Column(Integer, primary_key=True)
+    source_type = Column(String, nullable=False)   # chess_results_federation
+    source_code = Column(String, nullable=False)   # CYP, GRE
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    limit_count = Column(Integer, nullable=False, default=20)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
