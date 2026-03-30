@@ -1,0 +1,30 @@
+[
+  {
+    "name": "Paphos International Open",
+    "location": "Paphos, Cyprus",
+    "country": "cyprus",
+    "date": "12 Apr – 18 Apr 2026",
+    "format": "standard"
+  },
+  {
+    "name": "Nicosia Rapid Championship",
+    "location": "Nicosia, Cyprus",
+    "country": "cyprus",
+    "date": "5 May 2026",
+    "format": "rapid"
+  },
+  {
+    "name": "Athens Blitz Festival",
+    "location": "Athens, Greece",
+    "country": "greece",
+    "date": "20 May 2026",
+    "format": "blitz"
+  },
+  {
+    "name": "Thessaloniki Open",
+    "location": "Thessaloniki, Greece",
+    "country": "greece",
+    "date": "2 Jun – 8 Jun 2026",
+    "format": "standard"
+  }
+]
