@@ -30,7 +30,8 @@ def get_main_keyboard():
     keyboard = [
         ["Find tournaments"],
         ["Set format", "Set country"],
-        ["Show filters", "Clear filters"],
+        ["Set rated", "Show filters"],
+        ["Clear filters"],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -51,11 +52,20 @@ def get_country_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
+def get_rated_keyboard():
+    keyboard = [
+        ["Any", "Rated only"],
+        ["Back to menu"],
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+
+
 def get_user_filters(user_id):
     if user_id not in USER_FILTERS:
         USER_FILTERS[user_id] = {
             "format": None,
             "country": None,
+            "rated_only": False,
         }
     return USER_FILTERS[user_id]
 
@@ -106,11 +116,13 @@ async def show_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     format_value = user_filters["format"] or "any"
     country_value = user_filters["country"] or "any"
+    rated_value = "rated only" if user_filters["rated_only"] else "any"
 
     await update.message.reply_text(
         f"Current filters:\n"
         f"• Format: {format_value}\n"
-        f"• Country: {country_value}",
+        f"• Country: {country_value}\n"
+        f"• Rated: {rated_value}",
         reply_markup=get_main_keyboard(),
     )
 
@@ -123,6 +135,7 @@ async def clear_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     USER_FILTERS[user_id] = {
         "format": None,
         "country": None,
+        "rated_only": False,
     }
     USER_STATES[user_id] = None
 
@@ -150,6 +163,9 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if user_filters["country"] and tournament["country"] != user_filters["country"]:
             continue
 
+        if user_filters["rated_only"] and not tournament.get("fide_rated", False):
+            continue
+
         results.append(tournament)
 
     if not results:
@@ -164,6 +180,8 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         active_filters.append(f"format={user_filters['format']}")
     if user_filters["country"]:
         active_filters.append(f"country={user_filters['country']}")
+    if user_filters["rated_only"]:
+        active_filters.append("rated only")
 
     if active_filters:
         message = "🔎 Available tournaments\n"
@@ -207,6 +225,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(
             "Choose a country:",
             reply_markup=get_country_keyboard(),
+        )
+        return
+
+    if text == "Set rated":
+        USER_STATES[user_id] = "waiting_rated"
+        await update.message.reply_text(
+            "Choose rated filter:",
+            reply_markup=get_rated_keyboard(),
         )
         return
 
@@ -264,6 +290,35 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(
             f"Country filter set to: {value.capitalize()}",
             reply_markup=get_main_keyboard(),
+        )
+        return
+
+    if state == "waiting_rated":
+        value = text.lower()
+
+        if value == "any":
+            user_filters["rated_only"] = False
+            USER_STATES[user_id] = None
+
+            await update.message.reply_text(
+                "Rated filter set to: any",
+                reply_markup=get_main_keyboard(),
+            )
+            return
+
+        if value == "rated only":
+            user_filters["rated_only"] = True
+            USER_STATES[user_id] = None
+
+            await update.message.reply_text(
+                "Rated filter set to: rated only",
+                reply_markup=get_main_keyboard(),
+            )
+            return
+
+        await update.message.reply_text(
+            "Please choose one of the rated filter buttons.",
+            reply_markup=get_rated_keyboard(),
         )
         return
 
