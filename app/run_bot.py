@@ -60,6 +60,28 @@ def get_user_filters(user_id):
     return USER_FILTERS[user_id]
 
 
+def format_tournament_card(tournament):
+    rated_text = "Yes" if tournament.get("fide_rated") else "No"
+    entry_fee = tournament.get("entry_fee")
+    currency = tournament.get("currency", "")
+
+    if entry_fee is None:
+        fee_text = "Unknown"
+    else:
+        fee_text = f"{entry_fee} {currency}".strip()
+
+    return (
+        f"♟ {tournament['name']}\n"
+        f"📍 {tournament['location']}\n"
+        f"📅 {tournament['date']}\n"
+        f"⏱ {tournament['format'].capitalize()}\n"
+        f"🏅 FIDE rated: {rated_text}\n"
+        f"💶 Entry fee: {fee_text}\n"
+        f"🌐 Source: {tournament.get('source', 'unknown')}\n"
+        f"🔗 {tournament.get('url', 'No link')}\n"
+    )
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None:
         return
@@ -150,12 +172,7 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         message = "🔎 Available tournaments\n\n"
 
     for tournament in results:
-        message += (
-            f"♟ {tournament['name']}\n"
-            f"📍 {tournament['location']}\n"
-            f"📅 {tournament['date']}\n"
-            f"⏱ {tournament['format'].capitalize()}\n\n"
-        )
+        message += format_tournament_card(tournament) + "\n"
 
     await update.message.reply_text(
         message,

@@ -4,27 +4,47 @@
     "location": "Paphos, Cyprus",
     "country": "cyprus",
     "date": "12 Apr – 18 Apr 2026",
-    "format": "standard"
+    "format": "standard",
+    "source": "chess-results",
+    "url": "https://example.com/paphos-open",
+    "fide_rated": true,
+    "entry_fee": 40,
+    "currency": "EUR"
   },
   {
     "name": "Nicosia Rapid Championship",
     "location": "Nicosia, Cyprus",
     "country": "cyprus",
     "date": "5 May 2026",
-    "format": "rapid"
+    "format": "rapid",
+    "source": "local federation",
+    "url": "https://example.com/nicosia-rapid",
+    "fide_rated": true,
+    "entry_fee": 20,
+    "currency": "EUR"
   },
   {
     "name": "Athens Blitz Festival",
     "location": "Athens, Greece",
     "country": "greece",
     "date": "20 May 2026",
-    "format": "blitz"
+    "format": "blitz",
+    "source": "fide",
+    "url": "https://example.com/athens-blitz",
+    "fide_rated": false,
+    "entry_fee": 15,
+    "currency": "EUR"
   },
   {
     "name": "Thessaloniki Open",
     "location": "Thessaloniki, Greece",
     "country": "greece",
     "date": "2 Jun – 8 Jun 2026",
-    "format": "standard"
+    "format": "standard",
+    "source": "chess-results",
+    "url": "https://example.com/thessaloniki-open",
+    "fide_rated": true,
+    "entry_fee": 35,
+    "currency": "EUR"
   }
 ]
