@@ -26,15 +26,17 @@ class Tournament(Base):
     __tablename__ = "tournaments"
 
     id = Column(Integer, primary_key=True)
+    source = Column(String, nullable=False, default="manual")
+    source_event_id = Column(String, nullable=False, unique=True)
     name = Column(String, nullable=False)
     location = Column(String, nullable=False)
     country = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     format = Column(String, nullable=False)
-    source = Column(String, nullable=True)
     url = Column(String, nullable=True)
     fide_rated = Column(Boolean, nullable=False, default=False)
     entry_fee = Column(Numeric(10, 2), nullable=True)
     currency = Column(String, nullable=True)
+    last_seen_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
