@@ -1,12 +1,15 @@
 import os
 import json
 import logging
-from telegram import ReplyKeyboardMarkup, Update
+from datetime import datetime
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
     CommandHandler,
     ContextTypes,
     MessageHandler,
+    CallbackQueryHandler,
     filters,
 )
 
@@ -19,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 USER_FILTERS = {}
 USER_STATES = {}
+MAX_RESULTS = 5
 
 
 def load_tournaments():
@@ -60,6 +64,25 @@ def get_rated_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
+def get_results_keyboard(tournaments):
+    buttons = []
+
+    for index, tournament in enumerate(tournaments, start=1):
+        url = tournament.get("url")
+        name = tournament.get("name", f"Tournament {index}")
+
+        if not url:
+            continue
+
+        button_text = f"{index}. Open link"
+        buttons.append([InlineKeyboardButton(button_text, url=url)])
+
+    if not buttons:
+        return None
+
+    return InlineKeyboardMarkup(buttons)
+
+
 def get_user_filters(user_id):
     if user_id not in USER_FILTERS:
         USER_FILTERS[user_id] = {
@@ -87,10 +110,80 @@ def format_tournament_card(tournament):
         f"⏱ {tournament['format'].capitalize()}\n"
         f"🏅 FIDE rated: {rated_text}\n"
         f"💶 Entry fee: {fee_text}\n"
-        f"🌐 Source: {tournament.get('source', 'unknown')}\n"
-        f"🔗 {tournament.get('url', 'No link')}\n"
+        f"🌐 Source: {tournament.get('source', 'unknown')}"
     )
 
+def filter_tournaments(tournaments, user_filters):
+    results = []
+
+    for tournament in tournaments:
+        if user_filters["format"] and tournament["format"] != user_filters["format"]:
+            continue
+
+        if user_filters["country"] and tournament["country"] != user_filters["country"]:
+            continue
+
+        if user_filters["rated_only"] and not tournament.get("fide_rated", False):
+            continue
+
+
+        results.append(tournament)
+    results.sort(
+        key=lambda t: t.get("start_date", "9999-12-31")
+    )
+
+    return results
+
+
+def build_results_message(results, user_filters, page):
+    total_results = len(results)
+    start_index = page * MAX_RESULTS
+    end_index = start_index + MAX_RESULTS
+    visible_results = results[start_index:end_index]
+
+    active_filters = []
+    if user_filters["format"]:
+        active_filters.append(f"format={user_filters['format']}")
+    if user_filters["country"]:
+        active_filters.append(f"country={user_filters['country']}")
+    if user_filters["rated_only"]:
+        active_filters.append("rated only")
+
+    if active_filters:
+        message = "🔎 <b>Available tournaments</b>\n"
+        message += f"Filters: {', '.join(active_filters)}\n\n"
+    else:
+        message = "🔎 <b>Available tournaments</b>\n\n"
+
+    total_pages = (total_results - 1) // MAX_RESULTS + 1
+    message += f"Showing {start_index + 1}-{min(end_index, total_results)} of {total_results} "
+    message += f"(page {page + 1}/{total_pages})\n\n"
+
+    for index, tournament in enumerate(visible_results, start=start_index + 1):
+        message += format_tournament_card_html(index, tournament) + "\n"
+
+    return message
+
+
+def get_results_keyboard(page, total_results):
+    total_pages = (total_results - 1) // MAX_RESULTS + 1
+    buttons = []
+
+    nav_row = []
+    if page > 0:
+        nav_row.append(
+            InlineKeyboardButton("⬅ Previous", callback_data=f"results:{page - 1}")
+        )
+
+    if page < total_pages - 1:
+        nav_row.append(
+            InlineKeyboardButton("Next ➡", callback_data=f"results:{page + 1}")
+        )
+
+    if nav_row:
+        buttons.append(nav_row)
+
+    return InlineKeyboardMarkup(buttons) if buttons else None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None:
@@ -144,29 +237,15 @@ async def clear_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         reply_markup=get_main_keyboard(),
     )
 
-
 async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None:
         return
 
     tournaments = load_tournaments()
-
     user_id = update.message.from_user.id
     user_filters = get_user_filters(user_id)
 
-    results = []
-
-    for tournament in tournaments:
-        if user_filters["format"] and tournament["format"] != user_filters["format"]:
-            continue
-
-        if user_filters["country"] and tournament["country"] != user_filters["country"]:
-            continue
-
-        if user_filters["rated_only"] and not tournament.get("fide_rated", False):
-            continue
-
-        results.append(tournament)
+    results = filter_tournaments(tournaments, user_filters)
 
     if not results:
         await update.message.reply_text(
@@ -175,28 +254,50 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         return
 
-    active_filters = []
-    if user_filters["format"]:
-        active_filters.append(f"format={user_filters['format']}")
-    if user_filters["country"]:
-        active_filters.append(f"country={user_filters['country']}")
-    if user_filters["rated_only"]:
-        active_filters.append("rated only")
-
-    if active_filters:
-        message = "🔎 Available tournaments\n"
-        message += f"Filters: {', '.join(active_filters)}\n\n"
-    else:
-        message = "🔎 Available tournaments\n\n"
-
-    for tournament in results:
-        message += format_tournament_card(tournament) + "\n"
+    page = 0
+    message = build_results_message(results, user_filters, page)
+    keyboard = get_results_keyboard(page, len(results))
 
     await update.message.reply_text(
         message,
-        reply_markup=get_main_keyboard(),
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
     )
 
+async def handle_results_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None or query.from_user is None or query.data is None:
+        return
+
+    await query.answer()
+
+    user_id = query.from_user.id
+    user_filters = get_user_filters(user_id)
+    tournaments = load_tournaments()
+    results = filter_tournaments(tournaments, user_filters)
+
+    if not results:
+        await query.edit_message_text(
+            "No tournaments found for your filters.",
+        )
+        return
+
+    try:
+        _, page_str = query.data.split(":")
+        page = int(page_str)
+    except (ValueError, IndexError):
+        return
+
+    message = build_results_message(results, user_filters, page)
+    keyboard = get_results_keyboard(page, len(results))
+
+    await query.edit_message_text(
+        message,
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
+    )
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None or update.message.text is None:
@@ -327,6 +428,50 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         reply_markup=get_main_keyboard(),
     )
 
+def format_date_range(tournament):
+    start = tournament.get("start_date")
+    end = tournament.get("end_date")
+
+    try:
+        start_dt = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = datetime.strptime(end, "%Y-%m-%d")
+
+        if start == end:
+            return start_dt.strftime("%d %b %Y")
+
+        return f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
+    except Exception:
+        return "Unknown date"
+
+
+def format_tournament_card_html(index, tournament):
+    rated_text = "Yes" if tournament.get("fide_rated") else "No"
+    entry_fee = tournament.get("entry_fee")
+    currency = tournament.get("currency", "")
+
+    if entry_fee is None:
+        fee_text = "Unknown"
+    else:
+        fee_text = f"{entry_fee} {currency}".strip()
+
+    url = tournament.get("url")
+    if url:
+        link_text = f'🔗 <a href="{url}">Open tournament page</a>'
+    else:
+        link_text = "🔗 No link"
+
+    date_text = format_date_range(tournament)
+
+    return (
+        f"{index}. ♟ <b>{tournament['name']}</b>\n"
+        f"📍 {tournament['location']}\n"
+        f"📅 {date_text}\n"
+        f"⏱ {tournament['format'].capitalize()}\n"
+        f"🏅 FIDE rated: {rated_text}\n"
+        f"💶 Entry fee: {fee_text}\n"
+        f"🌐 Source: {tournament.get('source', 'unknown')}\n"
+        f"{link_text}\n"
+    )
 
 def main() -> None:
     token = os.getenv("BOT_TOKEN")
@@ -336,6 +481,7 @@ def main() -> None:
     app = Application.builder().token(token).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(handle_results_pagination, pattern=r"^results:\d+$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     logger.info("Bot started")
