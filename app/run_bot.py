@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+from app.db import SessionLocal
+from app.models import Tournament, UserFilter
 from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 from telegram.constants import ParseMode
@@ -26,8 +28,30 @@ MAX_RESULTS = 5
 
 
 def load_tournaments():
-    with open("data/tournaments.json", "r", encoding="utf-8") as file:
-        return json.load(file)
+    session = SessionLocal()
+
+    tournaments = session.query(Tournament).order_by(Tournament.start_date.asc()).all()
+
+    result = []
+    for t in tournaments:
+        result.append(
+            {
+                "name": t.name,
+                "location": t.location,
+                "country": t.country,
+                "start_date": t.start_date.isoformat(),
+                "end_date": t.end_date.isoformat(),
+                "format": t.format,
+                "source": t.source,
+                "url": t.url,
+                "fide_rated": t.fide_rated,
+                "entry_fee": float(t.entry_fee) if t.entry_fee is not None else None,
+                "currency": t.currency,
+            }
+        )
+
+    session.close()
+    return result
 
 
 def get_main_keyboard():
