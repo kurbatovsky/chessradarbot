@@ -474,8 +474,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if text == "Set country":
         USER_STATES[user_id] = "waiting_country"
         await update.message.reply_text(
-            "Choose a country:",
-            reply_markup=get_country_keyboard(),
+            "Enter country (for example: Cyprus, Greece, Armenia):",
+            reply_markup=get_main_keyboard(),
         )
         return
 
@@ -526,12 +526,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if state == "waiting_country":
         value = text.lower()
-        allowed = {"cyprus", "greece"}
 
-        if value not in allowed:
+        if not value:
             await update.message.reply_text(
-                "Please choose one of the country buttons.",
-                reply_markup=get_country_keyboard(),
+                "Please enter a country name.",
+                reply_markup=get_main_keyboard(),
             )
             return
 
@@ -577,7 +576,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         "Please use the menu buttons below.",
         reply_markup=get_main_keyboard(),
     )
-
+    
 def format_date_range(tournament):
     start = tournament.get("start_date")
     end = tournament.get("end_date")

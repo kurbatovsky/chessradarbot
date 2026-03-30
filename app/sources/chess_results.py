@@ -70,11 +70,41 @@ def detect_format_from_time_control(value: str) -> str:
 
 
 def normalize_country(value: str) -> str:
-    text = (value or "").lower()
-    if "cyprus" in text:
-        return "cyprus"
-    if "greece" in text:
-        return "greece"
+    text = (value or "").strip().lower()
+
+    federation_map = {
+        "cyp": "cyprus",
+        "gre": "greece",
+        "arm": "armenia",
+        "geo": "georgia",
+        "srb": "serbia",
+        "rus": "russia",
+        "kaz": "kazakhstan",
+        "uzb": "uzbekistan",
+    }
+
+    code_match = re.search(r"\(\s*([A-Z]{3})\s*\)", value or "")
+    if code_match:
+        code = code_match.group(1).lower()
+        if code in federation_map:
+            return federation_map[code]
+
+    text_map = {
+        "cyprus": "cyprus",
+        "greece": "greece",
+        "armenia": "armenia",
+        "georgia": "georgia",
+        "serbia": "serbia",
+        "russia": "russia",
+        "russian federation": "russia",
+        "kazakhstan": "kazakhstan",
+        "uzbekistan": "uzbekistan",
+    }
+
+    for key, normalized in text_map.items():
+        if key in text:
+            return normalized
+
     return "unknown"
 
 
