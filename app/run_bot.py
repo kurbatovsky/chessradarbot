@@ -22,7 +22,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-USER_FILTERS = {}
 USER_STATES = {}
 MAX_RESULTS = 5
 
@@ -53,6 +52,93 @@ def load_tournaments():
     session.close()
     return result
 
+def get_user_filters(user_id):
+    session = SessionLocal()
+
+    db_filter = (
+        session.query(UserFilter)
+        .filter(UserFilter.telegram_user_id == str(user_id))
+        .first()
+    )
+
+    if not db_filter:
+        db_filter = UserFilter(
+            telegram_user_id=str(user_id),
+            format=None,
+            country=None,
+            rated_only=False,
+        )
+        session.add(db_filter)
+        session.commit()
+        session.refresh(db_filter)
+
+    result = {
+        "format": db_filter.format,
+        "country": db_filter.country,
+        "rated_only": db_filter.rated_only,
+    }
+
+    session.close()
+    return result
+
+
+def save_user_filters(user_id, format_value=None, country_value=None, rated_only=None):
+    session = SessionLocal()
+
+    db_filter = (
+        session.query(UserFilter)
+        .filter(UserFilter.telegram_user_id == str(user_id))
+        .first()
+    )
+
+    if not db_filter:
+        db_filter = UserFilter(
+            telegram_user_id=str(user_id),
+            format=None,
+            country=None,
+            rated_only=False,
+        )
+        session.add(db_filter)
+        session.commit()
+        session.refresh(db_filter)
+
+    if format_value is not None:
+        db_filter.format = format_value
+
+    if country_value is not None:
+        db_filter.country = country_value
+
+    if rated_only is not None:
+        db_filter.rated_only = rated_only
+
+    session.commit()
+    session.close()
+
+
+def clear_user_filters(user_id):
+    session = SessionLocal()
+
+    db_filter = (
+        session.query(UserFilter)
+        .filter(UserFilter.telegram_user_id == str(user_id))
+        .first()
+    )
+
+    if not db_filter:
+        db_filter = UserFilter(
+            telegram_user_id=str(user_id),
+            format=None,
+            country=None,
+            rated_only=False,
+        )
+        session.add(db_filter)
+    else:
+        db_filter.format = None
+        db_filter.country = None
+        db_filter.rated_only = False
+
+    session.commit()
+    session.close()
 
 def get_main_keyboard():
     keyboard = [
@@ -249,11 +335,7 @@ async def clear_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     user_id = update.message.from_user.id
-    USER_FILTERS[user_id] = {
-        "format": None,
-        "country": None,
-        "rated_only": False,
-    }
+    clear_user_filters(user_id)
     USER_STATES[user_id] = None
 
     await update.message.reply_text(
@@ -389,7 +471,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        user_filters["format"] = value
+        save_user_filters(user_id, format_value=value)
         USER_STATES[user_id] = None
 
         await update.message.reply_text(
@@ -409,7 +491,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             )
             return
 
-        user_filters["country"] = value
+        save_user_filters(user_id, country_value=value)
         USER_STATES[user_id] = None
 
         await update.message.reply_text(
@@ -422,7 +504,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         value = text.lower()
 
         if value == "any":
-            user_filters["rated_only"] = False
+            save_user_filters(user_id, rated_only=False)
             USER_STATES[user_id] = None
 
             await update.message.reply_text(
@@ -432,7 +514,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             return
 
         if value == "rated only":
-            user_filters["rated_only"] = True
+            save_user_filters(user_id, rated_only=True)
             USER_STATES[user_id] = None
 
             await update.message.reply_text(
