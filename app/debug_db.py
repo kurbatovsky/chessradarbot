@@ -10,15 +10,15 @@ def main():
     print("\n=== TOURNAMENTS IN DB ===\n")
 
     for t in tournaments:
-        print(f"""
-ID: {t.id}
-Name: {t.name}
-Country: {t.country}
-Location: {t.location}
-Date: {t.start_date} → {t.end_date}
-Source: {t.source}
-------------------------
-""")
+        print(
+            {
+                "id": t.id,
+                "name": t.name,
+                "start_date": str(t.start_date),
+                "end_date": str(t.end_date),
+                "source": t.source,
+            }
+        )
 
     print(f"\nTotal: {len(tournaments)}\n")
 

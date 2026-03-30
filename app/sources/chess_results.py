@@ -13,6 +13,11 @@ BASE_HEADERS = {
 
 
 def build_full_tournament_url(url: str) -> str:
+    url = url.strip()
+
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = "https://" + url
+
     parsed = urlparse(url)
 
     query = parse_qs(parsed.query)
@@ -25,7 +30,7 @@ def build_full_tournament_url(url: str) -> str:
     return urlunparse(
         (
             parsed.scheme or "https",
-            parsed.netloc or "chess-results.com",
+            parsed.netloc,
             parsed.path,
             parsed.params,
             new_query,
@@ -162,3 +167,51 @@ def parse_tournament_page(url: str) -> dict:
         "federation_raw": federation,
         "time_control_raw": time_control,
     }
+    
+def parse_federation_page(fed: str = "CYP", limit: int = 20) -> list[str]:
+    url = f"https://chess-results.com/fed.aspx?fed={fed}&lan=1"
+
+    with httpx.Client(
+        headers=BASE_HEADERS,
+        timeout=30.0,
+        follow_redirects=True,
+    ) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        html = response.text
+
+    soup = BeautifulSoup(html, "lxml")
+
+    urls = []
+    seen = set()
+
+    for link in soup.find_all("a", href=True):
+        href = link["href"].strip()
+
+        if "tnr" not in href.lower():
+            continue
+
+        if href.startswith("http://") or href.startswith("https://"):
+            full_url = href
+        elif href.startswith("/"):
+            full_url = "https://chess-results.com" + href
+        else:
+            full_url = "https://chess-results.com/" + href
+
+        # убираем query, чтобы хранить базовый URL
+        match = re.search(r"(https?://[^?]+tnr\d+\.aspx)", full_url, re.IGNORECASE)
+        if not match:
+            continue
+
+        clean_url = match.group(1)
+
+        if clean_url in seen:
+            continue
+
+        seen.add(clean_url)
+        urls.append(clean_url)
+
+        if len(urls) >= limit:
+            break
+
+    return urls

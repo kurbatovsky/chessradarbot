@@ -1,9 +1,9 @@
 import os
 import json
 import logging
+from datetime import date
 from app.db import SessionLocal
 from app.models import Tournament, UserFilter
-from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -26,10 +26,17 @@ USER_STATES = {}
 MAX_RESULTS = 5
 
 
+from datetime import date
+
 def load_tournaments():
     session = SessionLocal()
 
-    tournaments = session.query(Tournament).order_by(Tournament.start_date.asc()).all()
+    tournaments = (
+        session.query(Tournament)
+        .filter(Tournament.end_date >= date.today())
+        .order_by(Tournament.start_date.asc())
+        .all()
+    )
 
     result = []
     for t in tournaments:
@@ -38,8 +45,8 @@ def load_tournaments():
                 "name": t.name,
                 "location": t.location,
                 "country": t.country,
-                "start_date": t.start_date.isoformat(),
-                "end_date": t.end_date.isoformat(),
+                "start_date": t.start_date.isoformat() if t.start_date else None,
+                "end_date": t.end_date.isoformat() if t.end_date else None,
                 "format": t.format,
                 "source": t.source,
                 "url": t.url,
@@ -50,6 +57,7 @@ def load_tournaments():
         )
 
     session.close()
+    print("DEBUG TOURNAMENTS:", result)
     return result
 
 def get_user_filters(user_id):
@@ -222,7 +230,6 @@ def get_user_filters(user_id):
     session.close()
     return result
 
-
 def format_tournament_card(tournament):
     rated_text = "Yes" if tournament.get("fide_rated") else "No"
     entry_fee = tournament.get("entry_fee")
@@ -233,10 +240,27 @@ def format_tournament_card(tournament):
     else:
         fee_text = f"{entry_fee} {currency}".strip()
 
+    start = tournament.get("start_date")
+    end = tournament.get("end_date")
+
+    if start and end:
+        try:
+            start_dt = datetime.strptime(start, "%Y-%m-%d")
+            end_dt = datetime.strptime(end, "%Y-%m-%d")
+
+            if start == end:
+                date_text = start_dt.strftime("%d %b %Y")
+            else:
+                date_text = f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
+        except Exception:
+            date_text = "Unknown date"
+    else:
+        date_text = "Unknown date"
+
     return (
         f"♟ {tournament['name']}\n"
         f"📍 {tournament['location']}\n"
-        f"📅 {tournament['date']}\n"
+        f"📅 {date_text}\n"
         f"⏱ {tournament['format'].capitalize()}\n"
         f"🏅 FIDE rated: {rated_text}\n"
         f"💶 Entry fee: {fee_text}\n"
@@ -290,7 +314,7 @@ def build_results_message(results, user_filters, page):
     message += f"(page {page + 1}/{total_pages})\n\n"
 
     for index, tournament in enumerate(visible_results, start=start_index + 1):
-        message += format_tournament_card_html(index, tournament) + "\n"
+        message += format_tournament_card(tournament) + "\n"
 
     return message
 
@@ -558,6 +582,9 @@ def format_date_range(tournament):
     start = tournament.get("start_date")
     end = tournament.get("end_date")
 
+    if not start or not end:
+        return "Unknown date"
+
     try:
         start_dt = datetime.strptime(start, "%Y-%m-%d")
         end_dt = datetime.strptime(end, "%Y-%m-%d")
@@ -570,7 +597,10 @@ def format_date_range(tournament):
         return "Unknown date"
 
 
-def format_tournament_card_html(index, tournament):
+from datetime import datetime
+
+
+def format_tournament_card(tournament):
     rated_text = "Yes" if tournament.get("fide_rated") else "No"
     entry_fee = tournament.get("entry_fee")
     currency = tournament.get("currency", "")
@@ -580,16 +610,35 @@ def format_tournament_card_html(index, tournament):
     else:
         fee_text = f"{entry_fee} {currency}".strip()
 
+    start = tournament.get("start_date")
+    end = tournament.get("end_date")
+
+    print("DEBUG CARD DATES:", tournament.get("name"), start, end)
+
+    if start and end:
+        try:
+            start_dt = datetime.strptime(start, "%Y-%m-%d")
+            end_dt = datetime.strptime(end, "%Y-%m-%d")
+
+            if start == end:
+                date_text = start_dt.strftime("%d %b %Y")
+            else:
+                date_text = f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
+        except Exception as e:
+            print("DEBUG DATE PARSE ERROR:", e)
+            date_text = "Unknown date"
+    else:
+        date_text = "Unknown date"
+
     url = tournament.get("url")
+
     if url:
         link_text = f'🔗 <a href="{url}">Open tournament page</a>'
     else:
         link_text = "🔗 No link"
 
-    date_text = format_date_range(tournament)
-
     return (
-        f"{index}. ♟ <b>{tournament['name']}</b>\n"
+        f"♟ <b>{tournament['name']}</b>\n"
         f"📍 {tournament['location']}\n"
         f"📅 {date_text}\n"
         f"⏱ {tournament['format'].capitalize()}\n"
