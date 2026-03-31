@@ -164,7 +164,7 @@ def main() -> None:
     app.add_handler(
         CallbackQueryHandler(
             handle_country_selector_callback,
-            pattern=r"^(country_toggle:|country_clear$|country_done$|country_back$)"
+            pattern=r"^(country_toggle:|country_clear$|country_done$|country_back$|country_menu:|country_noop$)"
         )
     )
 
