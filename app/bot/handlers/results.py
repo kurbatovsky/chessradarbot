@@ -76,3 +76,36 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
     )
+
+
+async def handle_results_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None or query.from_user is None or query.data is None:
+        return
+
+    await query.answer()
+
+    user_id = query.from_user.id
+    user_filters = get_user_filters(user_id)
+    tournaments = load_tournaments()
+    results = filter_tournaments(tournaments, user_filters)
+
+    if not results:
+        await query.edit_message_text("No tournaments found for your filters.")
+        return
+
+    try:
+        _, page_str = query.data.split(":")
+        page = int(page_str)
+    except (ValueError, IndexError):
+        return
+
+    text = build_results_message(results, user_filters, page)
+    keyboard = get_results_keyboard(page, len(results))
+
+    await query.edit_message_text(
+        text,
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
+    )
