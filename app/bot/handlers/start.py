@@ -9,6 +9,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if update.message is not None:
         await update.message.reply_text(
-            "Welcome to ChessRadarBot! Use the menu below to find tournaments and set filters.",
+            "♟ Welcome to ChessRadarBot!\n\n"
+            "Find offline chess tournaments and filter them by format, country, and rating.",
             reply_markup=get_main_keyboard(),
-        )
+)
