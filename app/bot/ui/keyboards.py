@@ -1,5 +1,5 @@
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-from app.core.constants import MAX_RESULTS
+from app.core.constants import MAX_RESULTS, AVAILABLE_FEDERATIONS
 
 def get_main_keyboard():
     keyboard = [
@@ -53,3 +53,36 @@ def get_results_keyboard(page, total_results):
         buttons.append(nav_row)
 
     return InlineKeyboardMarkup(buttons) if buttons else None
+
+def build_country_selector_keyboard(selected_countries: list[str]) -> InlineKeyboardMarkup:
+    rows = []
+    current_row = []
+
+    for country in AVAILABLE_FEDERATIONS:
+        is_selected = country.lower() in [c.lower() for c in selected_countries]
+        prefix = "✅" if is_selected else "☑️"
+        label = f"{prefix} {country}"
+
+        current_row.append(
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"country_toggle:{country}",
+            )
+        )
+
+        if len(current_row) == 2:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    rows.append([
+        InlineKeyboardButton("Clear", callback_data="country_clear"),
+        InlineKeyboardButton("Done", callback_data="country_done"),
+    ])
+    rows.append([
+        InlineKeyboardButton("Back", callback_data="country_back"),
+    ])
+
+    return InlineKeyboardMarkup(rows)

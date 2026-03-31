@@ -31,6 +31,11 @@ from app.core.constants import MAX_RESULTS
 from app.bot.handlers.start import start
 from app.bot.handlers.filters import show_filters, clear_filters
 from app.bot.handlers.results import find_tournaments, handle_results_pagination
+from app.bot.handlers.country_selector import (
+    open_country_selector,
+    handle_country_selector_callback,
+)
+
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -65,11 +70,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Set country":
-        context.user_data["state"] = "waiting_country"
-        await update.message.reply_text(
-            "Enter country (for example: Cyprus, Greece, Armenia):",
-            reply_markup=get_main_keyboard(),
-        )
+        await open_country_selector(update, context)
         return
 
     if text == "Set rated":
@@ -117,25 +118,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
-    if state == "waiting_country":
-        value = text.lower()
-
-        if not value:
-            await update.message.reply_text(
-                "Please enter a country name.",
-                reply_markup=get_main_keyboard(),
-            )
-            return
-
-        save_user_filters(user_id, country_value=value)
-        context.user_data["state"] = None
-
-        await update.message.reply_text(
-            f"Country filter set to: {value.capitalize()}",
-            reply_markup=get_main_keyboard(),
-        )
-        return
-
     if state == "waiting_rated":
         value = text.lower()
 
@@ -178,6 +160,14 @@ def main() -> None:
     app = Application.builder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_command))
+
+    app.add_handler(
+        CallbackQueryHandler(
+            handle_country_selector_callback,
+            pattern=r"^(country_toggle:|country_clear$|country_done$|country_back$)"
+        )
+    )
+
     app.add_handler(CallbackQueryHandler(handle_results_pagination, pattern=r"^results:\d+$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
