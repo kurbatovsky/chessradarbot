@@ -22,7 +22,6 @@ def has_active_filters(user_filters: dict) -> bool:
     if user_filters.get("format"):
         return True
 
-    # считать активным только если пользователь явно включил FIDE rated
     if user_filters.get("fide_rated") is True:
         return True
 
@@ -38,76 +37,41 @@ def has_active_filters(user_filters: dict) -> bool:
 
     return False
 
-async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
-    user_id = update.effective_user.id
+async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+
+    if message is None or user is None:
+        return
+
+    user_id = user.id
     user_filters = get_user_filters(user_id)
 
     if not has_active_filters(user_filters):
-        await update.message.reply_text(
+        await message.reply_text(
             "⚠️ Please select at least one filter before searching.\n\n"
             "Start with country — it works best.",
-            reply_markup=build_filters_menu(),  # если есть такая функция
+            reply_markup=get_main_keyboard(),
         )
         return
 
-    if update.message is None or update.message.from_user is None:
-        return
-
     tournaments = load_tournaments()
-    user_id = update.message.from_user.id
-    user_filters = get_user_filters(user_id)
-
     results = filter_tournaments(tournaments, user_filters)
 
     if not results:
-        await update.message.reply_text(
+        await message.reply_text(
             "No tournaments found for your filters.",
             reply_markup=get_main_keyboard(),
         )
         return
 
     page = 0
-    message = build_results_message(results, user_filters, page)
+    text = build_results_message(results, user_filters, page)
     keyboard = get_results_keyboard(page, len(results))
 
-    await update.message.reply_text(
-        message,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True,
-    )
-
-
-async def handle_results_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if query is None or query.from_user is None or query.data is None:
-        return
-
-    await query.answer()
-
-    user_id = query.from_user.id
-    user_filters = get_user_filters(user_id)
-    tournaments = load_tournaments()
-    results = filter_tournaments(tournaments, user_filters)
-
-    if not results:
-        await query.edit_message_text(
-            "No tournaments found for your filters.",
-        )
-        return
-
-    try:
-        _, page_str = query.data.split(":")
-        page = int(page_str)
-    except (ValueError, IndexError):
-        return
-
-    message = build_results_message(results, user_filters, page)
-    keyboard = get_results_keyboard(page, len(results))
-
-    await query.edit_message_text(
-        message,
+    await message.reply_text(
+        text,
         reply_markup=keyboard,
         parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
