@@ -10,7 +10,7 @@ from app.bot.ui.keyboards import (
     get_main_keyboard,
 )
 from app.core.countries import format_country_label
-from app.repositories.tournaments import get_popular_countries
+from app.repositories.app_cache import get_cache_value
 from app.repositories.user_filters import (
     get_user_filters,
     toggle_user_country,
