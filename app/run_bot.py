@@ -39,10 +39,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-USER_STATES = {}
-
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await start(update, context, USER_STATES)
+    await start(update, context)
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None or update.message.text is None:
@@ -50,16 +48,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     user_id = update.message.from_user.id
     text = update.message.text.strip()
-    state = USER_STATES.get(user_id)
+    state = context.user_data.get("state")
     user_filters = get_user_filters(user_id)
 
     if text == "Find tournaments":
-        USER_STATES[user_id] = None
+        context.user_data["state"] = None
         await find_tournaments(update, context)
         return
 
     if text == "Set format":
-        USER_STATES[user_id] = "waiting_format"
+        context.user_data["state"] = "waiting_format"
         await update.message.reply_text(
             "Choose a format:",
             reply_markup=get_format_keyboard(),
@@ -67,7 +65,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Set country":
-        USER_STATES[user_id] = "waiting_country"
+        context.user_data["state"] = "waiting_country"
         await update.message.reply_text(
             "Enter country (for example: Cyprus, Greece, Armenia):",
             reply_markup=get_main_keyboard(),
@@ -75,7 +73,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Set rated":
-        USER_STATES[user_id] = "waiting_rated"
+        context.user_data["state"] = "waiting_rated"
         await update.message.reply_text(
             "Choose rated filter:",
             reply_markup=get_rated_keyboard(),
@@ -83,16 +81,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Show filters":
-        USER_STATES[user_id] = None
+        context.user_data["state"] = None
         await show_filters(update, context)
         return
 
     if text == "Clear filters":
-        await clear_filters(update, context, USER_STATES)
+        await clear_filters(update, context)
         return
 
     if text == "Back to menu":
-        USER_STATES[user_id] = None
+        context.user_data["state"] = None
         await update.message.reply_text(
             "Back to main menu.",
             reply_markup=get_main_keyboard(),
@@ -111,7 +109,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             return
 
         save_user_filters(user_id, format_value=value)
-        USER_STATES[user_id] = None
+        context.user_data["state"] = None
 
         await update.message.reply_text(
             f"Format filter set to: {value}",
@@ -130,7 +128,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             return
 
         save_user_filters(user_id, country_value=value)
-        USER_STATES[user_id] = None
+        context.user_data["state"] = None
 
         await update.message.reply_text(
             f"Country filter set to: {value.capitalize()}",
@@ -143,7 +141,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         if value == "any":
             save_user_filters(user_id, rated_only=False)
-            USER_STATES[user_id] = None
+            context.user_data["state"] = None
 
             await update.message.reply_text(
                 "Rated filter set to: any",
@@ -153,7 +151,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         if value == "rated only":
             save_user_filters(user_id, rated_only=True)
-            USER_STATES[user_id] = None
+            context.user_data["state"] = None
 
             await update.message.reply_text(
                 "Rated filter set to: rated only",
