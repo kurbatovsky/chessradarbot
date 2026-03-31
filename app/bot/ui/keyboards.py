@@ -1,5 +1,7 @@
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
+MAX_RESULTS = 5
+
 def get_main_keyboard():
     keyboard = [
         ["Find tournaments"],
