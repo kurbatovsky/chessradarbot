@@ -13,20 +13,17 @@ def has_active_filters(user_filters: dict) -> bool:
     if not user_filters:
         return False
 
-    # countries (главный фильтр)
     if user_filters.get("countries"):
         return True
 
-    # format (если ещё старый формат)
-    if user_filters.get("format"):
-        return True
-
-    # future multi-format
     if user_filters.get("formats"):
         return True
 
-    # остальные фильтры
-    if user_filters.get("fide_rated") is not None:
+    if user_filters.get("format"):
+        return True
+
+    # считать активным только если пользователь явно включил FIDE rated
+    if user_filters.get("fide_rated") is True:
         return True
 
     if user_filters.get("date_from"):
@@ -35,7 +32,8 @@ def has_active_filters(user_filters: dict) -> bool:
     if user_filters.get("date_to"):
         return True
 
-    if user_filters.get("entry_fee_max") is not None:
+    entry_fee_max = user_filters.get("entry_fee_max")
+    if entry_fee_max not in (None, "", 0):
         return True
 
     return False
