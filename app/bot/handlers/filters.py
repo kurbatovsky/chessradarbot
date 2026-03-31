@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.core.countries import format_country_label
 from app.bot.ui.keyboards import get_main_keyboard
 from app.repositories.user_filters import get_user_filters, clear_user_filters
 
@@ -14,7 +15,7 @@ async def show_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     format_value = user_filters["format"] or "any"
     countries_value = (
-        ", ".join(user_filters["countries"])
+        ", ".join(format_country_label(country) for country in user_filters["countries"])
         if user_filters["countries"]
         else "any"
     )

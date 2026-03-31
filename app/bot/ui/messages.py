@@ -1,5 +1,6 @@
 from app.bot.ui.formatters import format_tournament_card
 from app.core.constants import MAX_RESULTS
+from app.core.countries import format_country_label
 
 
 def build_results_message(results, user_filters, page):
@@ -14,7 +15,11 @@ def build_results_message(results, user_filters, page):
         active_filters.append(f"format={user_filters['format']}")
 
     if user_filters["countries"]:
-        active_filters.append("countries=" + ", ".join(user_filters["countries"]))
+        active_filters.append(
+            "countries=" + ", ".join(
+                format_country_label(country) for country in user_filters["countries"]
+            )
+        )
 
     if user_filters["rated_only"]:
         active_filters.append("rated only")

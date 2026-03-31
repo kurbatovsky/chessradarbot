@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 
+from app.core.countries import format_country_label
 from app.bot.ui.keyboards import build_country_selector_keyboard, get_main_keyboard
 from app.repositories.user_filters import (
     get_user_filters,
@@ -60,8 +61,10 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
         text = (
             "Country filter set to: any"
             if not selected
-            else "Country filter set to: " + ", ".join(selected)
-        )
+            else "Country filter set to: " + ", ".join(
+                format_country_label(country) for country in selected
+            )
+    )
 
         await query.edit_message_text(text=text)
 

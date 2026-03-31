@@ -1,5 +1,6 @@
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-from app.core.constants import MAX_RESULTS, AVAILABLE_FEDERATIONS
+from app.core.constants import MAX_RESULTS
+from app.core.countries import AVAILABLE_COUNTRIES, format_country_label
 
 def get_main_keyboard():
     keyboard = [
@@ -58,10 +59,12 @@ def build_country_selector_keyboard(selected_countries: list[str]) -> InlineKeyb
     rows = []
     current_row = []
 
-    for country in AVAILABLE_FEDERATIONS:
-        is_selected = country.lower() in [c.lower() for c in selected_countries]
+    normalized_selected = {country.lower() for country in selected_countries}
+
+    for country in AVAILABLE_COUNTRIES:
+        is_selected = country in normalized_selected
         prefix = "✅" if is_selected else "☑️"
-        label = f"{prefix} {country}"
+        label = f"{prefix} {format_country_label(country)}"
 
         current_row.append(
             InlineKeyboardButton(

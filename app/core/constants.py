@@ -1,8 +1,3 @@
-MAX_RESULTS = 5
+from app.core.countries import AVAILABLE_COUNTRIES
 
-AVAILABLE_FEDERATIONS = [
-    "cyprus",
-    "greece",
-    "armenia",
-    "georgia",
-]
+MAX_RESULTS = 5

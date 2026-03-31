@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.core.countries import format_country_label
 
 
 def format_date_range(tournament):
@@ -22,15 +23,10 @@ def format_date_range(tournament):
 
 def format_tournament_card(tournament):
     rated_text = "Yes" if tournament.get("fide_rated") else "No"
-    entry_fee = tournament.get("entry_fee")
     currency = tournament.get("currency", "")
 
-    if entry_fee is None:
-        fee_text = "Unknown"
-    else:
-        fee_text = f"{entry_fee} {currency}".strip()
-
     date_text = format_date_range(tournament)
+    country_text = format_country_label(tournament.get("country", "unknown"))
 
     url = tournament.get("url")
 
@@ -39,13 +35,13 @@ def format_tournament_card(tournament):
     else:
         link_text = "🔗 No link"
 
-    return (
+        return (
         f"♟ <b>{tournament['name']}</b>\n"
         f"📍 {tournament['location']}\n"
+        f"{country_text}\n"
         f"📅 {date_text}\n"
         f"⏱ {tournament['format'].capitalize()}\n"
         f"🏅 FIDE rated: {rated_text}\n"
-        f"💶 Entry fee: {fee_text}\n"
         f"🌐 Source: {tournament.get('source', 'unknown')}\n"
         f"{link_text}\n"
     )
