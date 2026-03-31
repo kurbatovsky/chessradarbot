@@ -1,9 +1,12 @@
 import os
 import json
 import logging
-from datetime import date
-from app.db import SessionLocal
-from app.models import Tournament, UserFilter
+from app.repositories.tournaments import load_tournaments
+from app.repositories.user_filters import (
+    get_user_filters,
+    save_user_filters,
+    clear_user_filters,
+)
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -33,128 +36,6 @@ logger = logging.getLogger(__name__)
 
 USER_STATES = {}
 MAX_RESULTS = 5
-
-
-from datetime import date
-
-def load_tournaments():
-    session = SessionLocal()
-
-    tournaments = (
-        session.query(Tournament)
-        .filter(Tournament.end_date >= date.today())
-        .order_by(Tournament.start_date.asc())
-        .all()
-    )
-
-    result = []
-    for t in tournaments:
-        result.append(
-            {
-                "name": t.name,
-                "location": t.location,
-                "country": t.country,
-                "start_date": t.start_date.isoformat() if t.start_date else None,
-                "end_date": t.end_date.isoformat() if t.end_date else None,
-                "format": t.format,
-                "source": t.source,
-                "url": t.url,
-                "fide_rated": t.fide_rated,
-                "entry_fee": float(t.entry_fee) if t.entry_fee is not None else None,
-                "currency": t.currency,
-            }
-        )
-
-    session.close()
-    return result
-
-
-def save_user_filters(user_id, format_value=None, country_value=None, rated_only=None):
-    session = SessionLocal()
-
-    db_filter = (
-        session.query(UserFilter)
-        .filter(UserFilter.telegram_user_id == str(user_id))
-        .first()
-    )
-
-    if not db_filter:
-        db_filter = UserFilter(
-            telegram_user_id=str(user_id),
-            format=None,
-            country=None,
-            rated_only=False,
-        )
-        session.add(db_filter)
-        session.commit()
-        session.refresh(db_filter)
-
-    if format_value is not None:
-        db_filter.format = format_value
-
-    if country_value is not None:
-        db_filter.country = country_value
-
-    if rated_only is not None:
-        db_filter.rated_only = rated_only
-
-    session.commit()
-    session.close()
-
-
-def clear_user_filters(user_id):
-    session = SessionLocal()
-
-    db_filter = (
-        session.query(UserFilter)
-        .filter(UserFilter.telegram_user_id == str(user_id))
-        .first()
-    )
-
-    if not db_filter:
-        db_filter = UserFilter(
-            telegram_user_id=str(user_id),
-            format=None,
-            country=None,
-            rated_only=False,
-        )
-        session.add(db_filter)
-    else:
-        db_filter.format = None
-        db_filter.country = None
-        db_filter.rated_only = False
-
-    session.commit()
-    session.close()
-
-def get_user_filters(user_id):
-    session = SessionLocal()
-
-    db_filter = (
-        session.query(UserFilter)
-        .filter(UserFilter.telegram_user_id == str(user_id))
-        .first()
-    )
-
-    if not db_filter:
-        db_filter = UserFilter(
-            telegram_user_id=str(user_id),
-            format=None,
-            country=None,
-            rated_only=False,
-        )
-        session.add(db_filter)
-        session.commit()
-        session.refresh(db_filter)
-
-    result = {
-        "format": db_filter.format,
-        "country": db_filter.country,
-        "rated_only": db_filter.rated_only,
-    }
-
-    session.close()
-    return result
 
 def filter_tournaments(tournaments, user_filters):
     results = []
