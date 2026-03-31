@@ -18,7 +18,7 @@ class UserFilter(Base):
 
     id = Column(Integer, primary_key=True)
     telegram_user_id = Column(String, unique=True, nullable=False)
-    format = Column(String, nullable=True)
+    formats = Column(MutableList.as_mutable(JSONB), nullable=False, default=list)
     countries = Column(MutableList.as_mutable(JSONB), nullable=False, default=list)
     rated_only = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

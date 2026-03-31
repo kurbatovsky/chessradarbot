@@ -2,6 +2,7 @@ from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardBu
 
 from app.core.constants import MAX_RESULTS
 from app.core.countries import AVAILABLE_COUNTRIES, format_country_label
+from app.core.constants import FORMAT_LABELS
 
 
 COUNTRIES_PER_PAGE = 20
@@ -207,7 +208,7 @@ def build_country_page_keyboard(selected_countries: list[str], page: int) -> Inl
     return InlineKeyboardMarkup(rows)
 
 def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
-    ALL_FORMATS = ["classical", "rapid", "blitz"]
+    ALL_FORMATS = ["standard", "rapid", "blitz"]
 
     rows = []
     current_row = []
@@ -215,7 +216,7 @@ def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
     for fmt in ALL_FORMATS:
         is_selected = fmt in selected_formats
         prefix = "✅" if is_selected else "☑️"
-        label = f"{prefix} {fmt.capitalize()}"
+        label = f"{prefix} {FORMAT_LABELS[fmt]}"
 
         current_row.append(
             InlineKeyboardButton(

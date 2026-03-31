@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.core.countries import format_country_label
+from app.core.constants import FORMAT_LABELS
 from app.bot.ui.keyboards import get_main_keyboard, build_format_keyboard
 from app.repositories.user_filters import (
     get_user_filters,
@@ -21,7 +22,7 @@ async def show_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # --- FORMAT ---
     formats = user_filters.get("formats", [])
     if formats:
-        format_value = ", ".join(f.capitalize() for f in formats)
+        format_value = ", ".join(FORMAT_LABELS.get(f, f.capitalize()) for f in formats)
     else:
         format_value = "any"
 
