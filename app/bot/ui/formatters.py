@@ -23,7 +23,6 @@ def format_date_range(tournament):
 
 def format_tournament_card(tournament):
     rated_text = "Yes" if tournament.get("fide_rated") else "No"
-    currency = tournament.get("currency", "")
 
     date_text = format_date_range(tournament)
     country_text = format_country_label(tournament.get("country", "unknown"))
@@ -35,12 +34,12 @@ def format_tournament_card(tournament):
     else:
         link_text = "🔗 No link"
 
-        return (
-        f"♟ <b>{tournament['name']}</b>\n"
-        f"📍 {tournament['location']}\n"
+    return (
+        f"♟ <b>{tournament.get('name', 'Unnamed tournament')}</b>\n"
+        f"📍 {tournament.get('location', 'Unknown location')}\n"
         f"{country_text}\n"
         f"📅 {date_text}\n"
-        f"⏱ {tournament['format'].capitalize()}\n"
+        f"⏱ {(tournament.get('format') or 'unknown').capitalize()}\n"
         f"🏅 FIDE rated: {rated_text}\n"
         f"🌐 Source: {tournament.get('source', 'unknown')}\n"
         f"{link_text}\n"
