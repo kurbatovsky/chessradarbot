@@ -33,10 +33,6 @@ def _extract_countries(db_filter: UserFilter) -> list[str]:
     if db_filter.countries:
         return sorted({_normalize_country(country) for country in db_filter.countries})
 
-    # 2. fallback на старое поле
-    if db_filter.country:
-        return [_normalize_country(db_filter.country)]
-
     # 3. по умолчанию пустой список
     return []
 
