@@ -9,7 +9,50 @@ from app.repositories.user_filters import get_user_filters
 from app.services.tournament_service import filter_tournaments
 
 
+def has_active_filters(user_filters: dict) -> bool:
+    if not user_filters:
+        return False
+
+    # countries (главный фильтр)
+    if user_filters.get("countries"):
+        return True
+
+    # format (если ещё старый формат)
+    if user_filters.get("format"):
+        return True
+
+    # future multi-format
+    if user_filters.get("formats"):
+        return True
+
+    # остальные фильтры
+    if user_filters.get("fide_rated") is not None:
+        return True
+
+    if user_filters.get("date_from"):
+        return True
+
+    if user_filters.get("date_to"):
+        return True
+
+    if user_filters.get("entry_fee_max") is not None:
+        return True
+
+    return False
+
 async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    user_id = update.effective_user.id
+    user_filters = get_user_filters(user_id)
+
+    if not has_active_filters(user_filters):
+        await update.message.reply_text(
+            "⚠️ Please select at least one filter before searching.\n\n"
+            "Start with country — it works best.",
+            reply_markup=build_filters_menu(),  # если есть такая функция
+        )
+        return
+
     if update.message is None or update.message.from_user is None:
         return
 
