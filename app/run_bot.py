@@ -27,6 +27,7 @@ from app.bot.ui.keyboards import (
 from app.bot.ui.formatters import format_date_range, format_tournament_card
 from app.bot.ui.messages import build_results_message
 from app.services.tournament_service import filter_tournaments
+from app.core.constants import MAX_RESULTS
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -36,7 +37,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 USER_STATES = {}
-MAX_RESULTS = 5
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

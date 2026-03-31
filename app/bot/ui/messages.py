@@ -1,6 +1,5 @@
 from app.bot.ui.formatters import format_tournament_card
-
-MAX_RESULTS = 5
+from app.core.constants import MAX_RESULTS
 
 
 def build_results_message(results, user_filters, page):

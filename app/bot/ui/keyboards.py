@@ -1,6 +1,5 @@
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
-
-MAX_RESULTS = 5
+from app.core.constants import MAX_RESULTS
 
 def get_main_keyboard():
     keyboard = [
