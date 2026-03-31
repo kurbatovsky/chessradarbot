@@ -14,6 +14,15 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
+from app.bot.ui.keyboards import (
+    get_main_keyboard,
+    get_format_keyboard,
+    get_country_keyboard,
+    get_rated_keyboard,
+    get_results_keyboard,
+)
+from app.bot.ui.formatters import format_date_range, format_tournament_card
+from app.bot.ui.messages import build_results_message
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -148,59 +157,6 @@ def clear_user_filters(user_id):
     session.commit()
     session.close()
 
-def get_main_keyboard():
-    keyboard = [
-        ["Find tournaments"],
-        ["Set format", "Set country"],
-        ["Set rated", "Show filters"],
-        ["Clear filters"],
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-
-def get_format_keyboard():
-    keyboard = [
-        ["Standard", "Rapid", "Blitz"],
-        ["Back to menu"],
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-
-def get_country_keyboard():
-    keyboard = [
-        ["Cyprus", "Greece"],
-        ["Back to menu"],
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-
-def get_rated_keyboard():
-    keyboard = [
-        ["Any", "Rated only"],
-        ["Back to menu"],
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-
-
-def get_results_keyboard(tournaments):
-    buttons = []
-
-    for index, tournament in enumerate(tournaments, start=1):
-        url = tournament.get("url")
-        name = tournament.get("name", f"Tournament {index}")
-
-        if not url:
-            continue
-
-        button_text = f"{index}. Open link"
-        buttons.append([InlineKeyboardButton(button_text, url=url)])
-
-    if not buttons:
-        return None
-
-    return InlineKeyboardMarkup(buttons)
-
-
 def get_user_filters(user_id):
     session = SessionLocal()
 
@@ -230,43 +186,6 @@ def get_user_filters(user_id):
     session.close()
     return result
 
-def format_tournament_card(tournament):
-    rated_text = "Yes" if tournament.get("fide_rated") else "No"
-    entry_fee = tournament.get("entry_fee")
-    currency = tournament.get("currency", "")
-
-    if entry_fee is None:
-        fee_text = "Unknown"
-    else:
-        fee_text = f"{entry_fee} {currency}".strip()
-
-    start = tournament.get("start_date")
-    end = tournament.get("end_date")
-
-    if start and end:
-        try:
-            start_dt = datetime.strptime(start, "%Y-%m-%d")
-            end_dt = datetime.strptime(end, "%Y-%m-%d")
-
-            if start == end:
-                date_text = start_dt.strftime("%d %b %Y")
-            else:
-                date_text = f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
-        except Exception:
-            date_text = "Unknown date"
-    else:
-        date_text = "Unknown date"
-
-    return (
-        f"♟ {tournament['name']}\n"
-        f"📍 {tournament['location']}\n"
-        f"📅 {date_text}\n"
-        f"⏱ {tournament['format'].capitalize()}\n"
-        f"🏅 FIDE rated: {rated_text}\n"
-        f"💶 Entry fee: {fee_text}\n"
-        f"🌐 Source: {tournament.get('source', 'unknown')}"
-    )
-
 def filter_tournaments(tournaments, user_filters):
     results = []
 
@@ -288,56 +207,6 @@ def filter_tournaments(tournaments, user_filters):
 
     return results
 
-
-def build_results_message(results, user_filters, page):
-    total_results = len(results)
-    start_index = page * MAX_RESULTS
-    end_index = start_index + MAX_RESULTS
-    visible_results = results[start_index:end_index]
-
-    active_filters = []
-    if user_filters["format"]:
-        active_filters.append(f"format={user_filters['format']}")
-    if user_filters["country"]:
-        active_filters.append(f"country={user_filters['country']}")
-    if user_filters["rated_only"]:
-        active_filters.append("rated only")
-
-    if active_filters:
-        message = "🔎 <b>Available tournaments</b>\n"
-        message += f"Filters: {', '.join(active_filters)}\n\n"
-    else:
-        message = "🔎 <b>Available tournaments</b>\n\n"
-
-    total_pages = (total_results - 1) // MAX_RESULTS + 1
-    message += f"Showing {start_index + 1}-{min(end_index, total_results)} of {total_results} "
-    message += f"(page {page + 1}/{total_pages})\n\n"
-
-    for index, tournament in enumerate(visible_results, start=start_index + 1):
-        message += format_tournament_card(tournament) + "\n"
-
-    return message
-
-
-def get_results_keyboard(page, total_results):
-    total_pages = (total_results - 1) // MAX_RESULTS + 1
-    buttons = []
-
-    nav_row = []
-    if page > 0:
-        nav_row.append(
-            InlineKeyboardButton("⬅ Previous", callback_data=f"results:{page - 1}")
-        )
-
-    if page < total_pages - 1:
-        nav_row.append(
-            InlineKeyboardButton("Next ➡", callback_data=f"results:{page + 1}")
-        )
-
-    if nav_row:
-        buttons.append(nav_row)
-
-    return InlineKeyboardMarkup(buttons) if buttons else None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None:
@@ -575,76 +444,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(
         "Please use the menu buttons below.",
         reply_markup=get_main_keyboard(),
-    )
-    
-def format_date_range(tournament):
-    start = tournament.get("start_date")
-    end = tournament.get("end_date")
-
-    if not start or not end:
-        return "Unknown date"
-
-    try:
-        start_dt = datetime.strptime(start, "%Y-%m-%d")
-        end_dt = datetime.strptime(end, "%Y-%m-%d")
-
-        if start == end:
-            return start_dt.strftime("%d %b %Y")
-
-        return f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
-    except Exception:
-        return "Unknown date"
-
-
-from datetime import datetime
-
-
-def format_tournament_card(tournament):
-    rated_text = "Yes" if tournament.get("fide_rated") else "No"
-    entry_fee = tournament.get("entry_fee")
-    currency = tournament.get("currency", "")
-
-    if entry_fee is None:
-        fee_text = "Unknown"
-    else:
-        fee_text = f"{entry_fee} {currency}".strip()
-
-    start = tournament.get("start_date")
-    end = tournament.get("end_date")
-
-    print("DEBUG CARD DATES:", tournament.get("name"), start, end)
-
-    if start and end:
-        try:
-            start_dt = datetime.strptime(start, "%Y-%m-%d")
-            end_dt = datetime.strptime(end, "%Y-%m-%d")
-
-            if start == end:
-                date_text = start_dt.strftime("%d %b %Y")
-            else:
-                date_text = f"{start_dt.strftime('%d %b')} – {end_dt.strftime('%d %b %Y')}"
-        except Exception as e:
-            print("DEBUG DATE PARSE ERROR:", e)
-            date_text = "Unknown date"
-    else:
-        date_text = "Unknown date"
-
-    url = tournament.get("url")
-
-    if url:
-        link_text = f'🔗 <a href="{url}">Open tournament page</a>'
-    else:
-        link_text = "🔗 No link"
-
-    return (
-        f"♟ <b>{tournament['name']}</b>\n"
-        f"📍 {tournament['location']}\n"
-        f"📅 {date_text}\n"
-        f"⏱ {tournament['format'].capitalize()}\n"
-        f"🏅 FIDE rated: {rated_text}\n"
-        f"💶 Entry fee: {fee_text}\n"
-        f"🌐 Source: {tournament.get('source', 'unknown')}\n"
-        f"{link_text}\n"
     )
 
 def main() -> None:
