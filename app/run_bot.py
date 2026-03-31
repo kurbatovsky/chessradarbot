@@ -28,6 +28,9 @@ from app.bot.ui.formatters import format_date_range, format_tournament_card
 from app.bot.ui.messages import build_results_message
 from app.services.tournament_service import filter_tournaments
 from app.core.constants import MAX_RESULTS
+from app.bot.handlers.start import start
+from app.bot.handlers.filters import show_filters, clear_filters
+from app.bot.handlers.results import find_tournaments, handle_results_pagination
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -38,116 +41,8 @@ logger = logging.getLogger(__name__)
 
 USER_STATES = {}
 
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message is None or update.message.from_user is None:
-        return
-
-    user_id = update.message.from_user.id
-    get_user_filters(user_id)
-    USER_STATES[user_id] = None
-
-    await update.message.reply_text(
-        "♟ Welcome to ChessRadar.\n\n"
-        "Use the buttons below to find offline chess tournaments.",
-        reply_markup=get_main_keyboard(),
-    )
-
-
-async def show_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message is None or update.message.from_user is None:
-        return
-
-    user_id = update.message.from_user.id
-    user_filters = get_user_filters(user_id)
-
-    format_value = user_filters["format"] or "any"
-    country_value = user_filters["country"] or "any"
-    rated_value = "rated only" if user_filters["rated_only"] else "any"
-
-    await update.message.reply_text(
-        f"Current filters:\n"
-        f"• Format: {format_value}\n"
-        f"• Country: {country_value}\n"
-        f"• Rated: {rated_value}",
-        reply_markup=get_main_keyboard(),
-    )
-
-
-async def clear_filters(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message is None or update.message.from_user is None:
-        return
-
-    user_id = update.message.from_user.id
-    clear_user_filters(user_id)
-    USER_STATES[user_id] = None
-
-    await update.message.reply_text(
-        "All filters cleared.",
-        reply_markup=get_main_keyboard(),
-    )
-
-async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message is None or update.message.from_user is None:
-        return
-
-    tournaments = load_tournaments()
-    user_id = update.message.from_user.id
-    user_filters = get_user_filters(user_id)
-
-    results = filter_tournaments(tournaments, user_filters)
-
-    if not results:
-        await update.message.reply_text(
-            "No tournaments found for your filters.",
-            reply_markup=get_main_keyboard(),
-        )
-        return
-
-    page = 0
-    message = build_results_message(results, user_filters, page)
-    keyboard = get_results_keyboard(page, len(results))
-
-    await update.message.reply_text(
-        message,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True,
-    )
-
-async def handle_results_pagination(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    if query is None or query.from_user is None or query.data is None:
-        return
-
-    await query.answer()
-
-    user_id = query.from_user.id
-    user_filters = get_user_filters(user_id)
-    tournaments = load_tournaments()
-    results = filter_tournaments(tournaments, user_filters)
-
-    if not results:
-        await query.edit_message_text(
-            "No tournaments found for your filters.",
-        )
-        return
-
-    try:
-        _, page_str = query.data.split(":")
-        page = int(page_str)
-    except (ValueError, IndexError):
-        return
-
-    message = build_results_message(results, user_filters, page)
-    keyboard = get_results_keyboard(page, len(results))
-
-    await query.edit_message_text(
-        message,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML,
-        disable_web_page_preview=True,
-    )
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await start(update, context, USER_STATES)
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None or update.message.text is None:
@@ -193,7 +88,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Clear filters":
-        await clear_filters(update, context)
+        await clear_filters(update, context, USER_STATES)
         return
 
     if text == "Back to menu":
@@ -284,7 +179,7 @@ def main() -> None:
 
     app = Application.builder().token(token).build()
 
-    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CallbackQueryHandler(handle_results_pagination, pattern=r"^results:\d+$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
