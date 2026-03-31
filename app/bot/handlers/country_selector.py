@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from app.repositories.app_cache import get_cache_value
 
 from app.bot.ui.keyboards import (
     build_country_selector_home_keyboard,
@@ -57,7 +58,7 @@ async def _render_country_menu(query, context: ContextTypes.DEFAULT_TYPE, user_i
         markup = build_country_selector_home_keyboard(selected)
 
     elif menu == "popular":
-        popular_countries = get_popular_countries(limit=10)
+        popular_countries = get_cache_value("popular_countries", default=[])
 
         if not popular_countries:
             popular_countries = FALLBACK_POPULAR_COUNTRIES

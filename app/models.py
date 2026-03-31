@@ -52,3 +52,11 @@ class SourceConfig(Base):
     is_enabled = Column(Boolean, nullable=False, default=True)
     limit_count = Column(Integer, nullable=False, default=20)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class AppCache(Base):
+    __tablename__ = "app_cache"
+
+    id = Column(Integer, primary_key=True)
+    cache_key = Column(String, unique=True, nullable=False)
+    cache_value = Column(MutableList.as_mutable(JSONB), nullable=False, default=list)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

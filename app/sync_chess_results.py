@@ -4,6 +4,8 @@ from app.db import SessionLocal
 from app.models import Tournament
 from app.sources.chess_results import parse_federation_page, parse_tournament_page
 from app.get_enabled_sources import get_enabled_chess_results_federations
+from app.repositories.tournaments import calculate_popular_countries
+from app.repositories.app_cache import set_cache_value
 
 
 def upsert_tournament(session, data):
@@ -117,6 +119,10 @@ def main():
             print(f"  ERROR: {e}")
 
     session.close()
+
+    popular_countries = calculate_popular_countries(limit=10)
+    set_cache_value("popular_countries", popular_countries)
+    print(f"Popular countries cache updated: {popular_countries}")
 
     print("\n=== DAILY SYNC SUMMARY ===")
     print(f"Inserted: {inserted}")

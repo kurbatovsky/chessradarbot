@@ -36,12 +36,18 @@ def load_tournaments():
     session.close()
     return result
 
-def get_popular_countries(limit: int = 10) -> list[str]:
+def calculate_popular_countries(limit: int = 10) -> list[str]:
     session = SessionLocal()
     try:
         rows = (
-            session.query(Tournament.country, func.count(Tournament.id).label("tournament_count"))
+            session.query(
+                Tournament.country,
+                func.count(Tournament.id).label("tournament_count"),
+            )
             .filter(Tournament.end_date >= date.today())
+            .filter(Tournament.country.isnot(None))
+            .filter(Tournament.country != "")
+            .filter(func.lower(Tournament.country) != "unknown")
             .group_by(Tournament.country)
             .order_by(func.count(Tournament.id).desc(), Tournament.country.asc())
             .limit(limit)
