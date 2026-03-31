@@ -66,36 +66,6 @@ def load_tournaments():
         )
 
     session.close()
-    print("DEBUG TOURNAMENTS:", result)
-    return result
-
-def get_user_filters(user_id):
-    session = SessionLocal()
-
-    db_filter = (
-        session.query(UserFilter)
-        .filter(UserFilter.telegram_user_id == str(user_id))
-        .first()
-    )
-
-    if not db_filter:
-        db_filter = UserFilter(
-            telegram_user_id=str(user_id),
-            format=None,
-            country=None,
-            rated_only=False,
-        )
-        session.add(db_filter)
-        session.commit()
-        session.refresh(db_filter)
-
-    result = {
-        "format": db_filter.format,
-        "country": db_filter.country,
-        "rated_only": db_filter.rated_only,
-    }
-
-    session.close()
     return result
 
 
