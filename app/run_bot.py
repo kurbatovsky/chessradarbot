@@ -26,6 +26,7 @@ from app.bot.ui.keyboards import (
 )
 from app.bot.ui.formatters import format_date_range, format_tournament_card
 from app.bot.ui.messages import build_results_message
+from app.services.tournament_service import filter_tournaments
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -36,27 +37,6 @@ logger = logging.getLogger(__name__)
 
 USER_STATES = {}
 MAX_RESULTS = 5
-
-def filter_tournaments(tournaments, user_filters):
-    results = []
-
-    for tournament in tournaments:
-        if user_filters["format"] and tournament["format"] != user_filters["format"]:
-            continue
-
-        if user_filters["country"] and tournament["country"] != user_filters["country"]:
-            continue
-
-        if user_filters["rated_only"] and not tournament.get("fide_rated", False):
-            continue
-
-
-        results.append(tournament)
-    results.sort(
-        key=lambda t: t.get("start_date", "9999-12-31")
-    )
-
-    return results
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
