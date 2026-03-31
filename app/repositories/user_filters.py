@@ -16,9 +16,8 @@ def _get_or_create_user_filter(session, user_id: int) -> UserFilter:
     if not db_filter:
         db_filter = UserFilter(
             telegram_user_id=str(user_id),
-            format=None,
-            country=None,     # старое поле
-            countries=None,   # новое поле пока может быть None до миграции
+            formats=[],        # ← новое поле
+            countries=[],
             rated_only=False,
         )
         session.add(db_filter)
@@ -29,11 +28,8 @@ def _get_or_create_user_filter(session, user_id: int) -> UserFilter:
 
 
 def _extract_countries(db_filter: UserFilter) -> list[str]:
-    # 1. если новое поле уже заполнено — используем его
     if db_filter.countries:
-        return sorted({_normalize_country(country) for country in db_filter.countries})
-
-    # 3. по умолчанию пустой список
+        return sorted({_normalize_country(c) for c in db_filter.countries})
     return []
 
 
@@ -43,9 +39,9 @@ def get_user_filters(user_id: int) -> dict:
         db_filter = _get_or_create_user_filter(session, user_id)
 
         return {
-            "format": db_filter.format,
+            "formats": db_filter.formats or [],
             "countries": _extract_countries(db_filter),
-            "rated_only": db_filter.rated_only,
+            "fide_rated": db_filter.rated_only,
         }
     finally:
         session.close()
@@ -53,7 +49,7 @@ def get_user_filters(user_id: int) -> dict:
 
 def save_user_filters(
     user_id: int,
-    format_value=None,
+    formats_value=None,
     countries_value=None,
     rated_only=None,
 ) -> None:
@@ -61,15 +57,12 @@ def save_user_filters(
     try:
         db_filter = _get_or_create_user_filter(session, user_id)
 
-        if format_value is not None:
-            db_filter.format = format_value
+        if formats_value is not None:
+            db_filter.formats = formats_value
 
         if countries_value is not None:
-            normalized = sorted({_normalize_country(country) for country in countries_value})
+            normalized = sorted({_normalize_country(c) for c in countries_value})
             db_filter.countries = normalized
-
-            # временно синхронизируем старое поле, чтобы переход был мягкий
-            db_filter.country = normalized[0] if len(normalized) == 1 else None
 
         if rated_only is not None:
             db_filter.rated_only = rated_only
@@ -78,6 +71,41 @@ def save_user_filters(
     finally:
         session.close()
 
+
+# --- FORMAT TOGGLE ---
+
+def toggle_user_format(user_id: int, format_value: str) -> list[str]:
+    session = SessionLocal()
+    try:
+        db_filter = _get_or_create_user_filter(session, user_id)
+
+        formats = list(db_filter.formats or [])
+
+        if format_value in formats:
+            formats.remove(format_value)
+        else:
+            formats.append(format_value)
+
+        formats = sorted(set(formats))
+        db_filter.formats = formats
+
+        session.commit()
+        return formats
+    finally:
+        session.close()
+
+
+def clear_user_formats(user_id: int) -> None:
+    session = SessionLocal()
+    try:
+        db_filter = _get_or_create_user_filter(session, user_id)
+        db_filter.formats = []
+        session.commit()
+    finally:
+        session.close()
+
+
+# --- COUNTRIES (оставляем как есть) ---
 
 def toggle_user_country(user_id: int, country: str) -> list[str]:
     session = SessionLocal()
@@ -93,11 +121,7 @@ def toggle_user_country(user_id: int, country: str) -> list[str]:
             countries.append(normalized_country)
 
         countries = sorted(set(countries))
-
         db_filter.countries = countries
-
-        # временная обратная совместимость
-        db_filter.country = countries[0] if len(countries) == 1 else None
 
         session.commit()
         return countries
@@ -110,7 +134,6 @@ def clear_user_countries(user_id: int) -> None:
     try:
         db_filter = _get_or_create_user_filter(session, user_id)
         db_filter.countries = []
-        db_filter.country = None
         session.commit()
     finally:
         session.close()
@@ -120,10 +143,11 @@ def clear_user_filters(user_id: int) -> None:
     session = SessionLocal()
     try:
         db_filter = _get_or_create_user_filter(session, user_id)
-        db_filter.format = None
+
+        db_filter.formats = []
         db_filter.countries = []
-        db_filter.country = None
         db_filter.rated_only = False
+
         session.commit()
     finally:
         session.close()

@@ -1,14 +1,7 @@
 import os
-import json
 import logging
-from app.repositories.tournaments import load_tournaments
-from app.repositories.user_filters import (
-    get_user_filters,
-    save_user_filters,
-    clear_user_filters,
-)
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
-from telegram.constants import ParseMode
+
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -17,25 +10,31 @@ from telegram.ext import (
     CallbackQueryHandler,
     filters,
 )
+
+from app.repositories.user_filters import (
+    get_user_filters,
+    save_user_filters,
+)
 from app.bot.ui.keyboards import (
     get_main_keyboard,
-    get_format_keyboard,
     get_country_keyboard,
     get_rated_keyboard,
-    get_results_keyboard,
 )
-from app.bot.ui.formatters import format_date_range, format_tournament_card
-from app.bot.ui.messages import build_results_message
-from app.services.tournament_service import filter_tournaments
-from app.core.constants import MAX_RESULTS
 from app.bot.handlers.start import start
-from app.bot.handlers.filters import show_filters, clear_filters
+from app.bot.handlers.filters import (
+    show_filters,
+    clear_filters,
+    show_format_selector,
+    handle_format_toggle,
+    handle_format_clear,
+    handle_format_done,
+    handle_format_back,
+)
 from app.bot.handlers.results import find_tournaments, handle_results_pagination
 from app.bot.handlers.country_selector import (
     open_country_selector,
     handle_country_selector_callback,
 )
-
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -44,8 +43,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await start(update, context)
+
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message is None or update.message.from_user is None or update.message.text is None:
@@ -62,11 +63,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     if text == "Set format":
-        context.user_data["state"] = "waiting_format"
-        await update.message.reply_text(
-            "Choose a format:",
-            reply_markup=get_format_keyboard(),
-        )
+        context.user_data["state"] = None
+        await show_format_selector(update, context)
         return
 
     if text == "Set country":
@@ -94,26 +92,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         context.user_data["state"] = None
         await update.message.reply_text(
             "Back to main menu.",
-            reply_markup=get_main_keyboard(),
-        )
-        return
-
-    if state == "waiting_format":
-        value = text.lower()
-        allowed = {"standard", "rapid", "blitz"}
-
-        if value not in allowed:
-            await update.message.reply_text(
-                "Please choose one of the format buttons.",
-                reply_markup=get_format_keyboard(),
-            )
-            return
-
-        save_user_filters(user_id, format_value=value)
-        context.user_data["state"] = None
-
-        await update.message.reply_text(
-            f"Format filter set to: {value}",
             reply_markup=get_main_keyboard(),
         )
         return
@@ -152,6 +130,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         reply_markup=get_main_keyboard(),
     )
 
+
 def main() -> None:
     token = os.getenv("BOT_TOKEN")
     if not token:
@@ -167,6 +146,11 @@ def main() -> None:
             pattern=r"^(country_toggle:|country_clear$|country_done$|country_back$|country_menu:|country_noop$)"
         )
     )
+
+    app.add_handler(CallbackQueryHandler(handle_format_toggle, pattern=r"^format_toggle:"))
+    app.add_handler(CallbackQueryHandler(handle_format_clear, pattern=r"^format_clear$"))
+    app.add_handler(CallbackQueryHandler(handle_format_done, pattern=r"^format_done$"))
+    app.add_handler(CallbackQueryHandler(handle_format_back, pattern=r"^format_back$"))
 
     app.add_handler(CallbackQueryHandler(handle_results_pagination, pattern=r"^results:\d+$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))

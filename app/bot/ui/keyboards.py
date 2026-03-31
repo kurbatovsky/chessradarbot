@@ -205,3 +205,38 @@ def build_country_page_keyboard(selected_countries: list[str], page: int) -> Inl
     ])
 
     return InlineKeyboardMarkup(rows)
+
+def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
+    ALL_FORMATS = ["classical", "rapid", "blitz"]
+
+    rows = []
+    current_row = []
+
+    for fmt in ALL_FORMATS:
+        is_selected = fmt in selected_formats
+        prefix = "✅" if is_selected else "☑️"
+        label = f"{prefix} {fmt.capitalize()}"
+
+        current_row.append(
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"format_toggle:{fmt}",
+            )
+        )
+
+        if len(current_row) == 2:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    rows.append([
+        InlineKeyboardButton("Clear", callback_data="format_clear"),
+        InlineKeyboardButton("Done", callback_data="format_done"),
+    ])
+    rows.append([
+        InlineKeyboardButton("Back", callback_data="format_back"),
+    ])
+
+    return InlineKeyboardMarkup(rows)
