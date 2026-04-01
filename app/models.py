@@ -10,6 +10,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from app.db import Base
 from sqlalchemy.dialects.postgresql import JSONB
@@ -22,6 +23,13 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     telegram_user_id = Column(String, unique=True, nullable=False)
     username = Column(String, nullable=True)
+    onboarding_step = Column(String, nullable=True)
+    onboarding_completed = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
