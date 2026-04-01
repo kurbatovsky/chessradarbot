@@ -35,6 +35,7 @@ from app.bot.handlers.country_selector import (
     open_country_selector,
     handle_country_selector_callback,
 )
+from app.repositories.users import get_or_create_user
 
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
@@ -52,10 +53,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if update.message is None or update.message.from_user is None or update.message.text is None:
         return
 
+    get_or_create_user(
+    telegram_user_id=update.message.from_user.id,
+    username=update.message.from_user.username,
+    )
+
     user_id = update.message.from_user.id
     text = update.message.text.strip()
     state = context.user_data.get("state")
-    user_filters = get_user_filters(user_id)
 
     if text == "Find tournaments":
         context.user_data["state"] = None

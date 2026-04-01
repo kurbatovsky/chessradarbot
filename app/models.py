@@ -1,4 +1,16 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Integer, Numeric, String, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from app.db import Base
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
@@ -60,3 +72,42 @@ class AppCache(Base):
     cache_key = Column(String, unique=True, nullable=False)
     cache_value = Column(MutableList.as_mutable(JSONB), nullable=False, default=list)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+class NotificationSetting(Base):
+    __tablename__ = "notification_settings"
+
+    id = Column(Integer, primary_key=True)
+    telegram_user_id = Column(String, unique=True, nullable=False)
+
+    is_enabled = Column(Boolean, nullable=False, default=False)
+    delivery_hour = Column(Integer, nullable=False, default=9)
+    timezone = Column(String, nullable=False, default="UTC")
+
+    last_sent_date = Column(Date, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class NotificationDelivery(Base):
+    __tablename__ = "notification_deliveries"
+
+    id = Column(Integer, primary_key=True)
+
+    telegram_user_id = Column(String, nullable=False)
+    tournament_id = Column(Integer, ForeignKey("tournaments.id"), nullable=False)
+
+    sent_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    delivery_date = Column(Date, nullable=False)
+
+    status = Column(String, nullable=False, default="sent")
+    error_message = Column(Text, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("telegram_user_id", "tournament_id", name="uq_notification_user_tournament"),
+    )
