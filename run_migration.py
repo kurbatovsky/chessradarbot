@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine, text
 
-DATABASE_URL = "postgresql://chessradar_db_user:km9L7WIxYRXKFZn5ea4b2Q7E205Vl68H@dpg-d757079r0fns73eg4vag-a.frankfurt-postgres.render.com/chessradar_db"
 
 sql = """
 ALTER TABLE user_filters
