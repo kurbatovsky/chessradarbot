@@ -161,20 +161,25 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
         return True
 
     if data.startswith("onb_rated:"):
-
         value = data.split(":", 1)[1]
+
+        rated_only = None
         if value == "any":
-            save_user_filters(user_id, rated_only=False)
+            rated_only = False
         elif value == "rated":
-            save_user_filters(user_id, rated_only=True)
+            rated_only = True
 
-        from app.repositories.user_filters import get_user_filters
-        filters = get_user_filters(user_id)
+        # сохраняем явно
+        save_user_filters(
+            user_id,
+            rated_only=rated_only,
+        )
 
+        # 👇 ВАЖНО: используем это же значение напрямую
         await query.edit_message_text(
             "Step 3 of 5 — Rated filter\n\n"
             "Do you want only rated tournaments?",
-            reply_markup=get_onboarding_rated_keyboard(filters.get("rated_only")),
+            reply_markup=get_onboarding_rated_keyboard(rated_only),
         )
         return True
 
