@@ -1,3 +1,4 @@
+from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.db import SessionLocal
@@ -8,7 +9,7 @@ DEFAULT_TIMEZONE = "UTC"
 DEFAULT_DELIVERY_HOUR = 9
 
 
-def _normalize_timezone(value: str | None) -> str:
+def _normalize_timezone(value: Optional[str]) -> str:
     if not value:
         return DEFAULT_TIMEZONE
     value = value.strip()
@@ -19,7 +20,7 @@ def _normalize_timezone(value: str | None) -> str:
         return DEFAULT_TIMEZONE
 
 
-def _normalize_hour(value: int | None) -> int:
+def _normalize_hour(value: Optional[int]) -> int:
     if value is None:
         return DEFAULT_DELIVERY_HOUR
     if value < 0:
@@ -29,7 +30,7 @@ def _normalize_hour(value: int | None) -> int:
     return value
 
 
-def _get_or_create(session, user_id: int | str) -> NotificationSetting:
+def _get_or_create(session, user_id) -> NotificationSetting:
     telegram_user_id = str(user_id)
 
     row = (
@@ -52,7 +53,7 @@ def _get_or_create(session, user_id: int | str) -> NotificationSetting:
     return row
 
 
-def get_notification_settings(user_id: int | str) -> dict:
+def get_notification_settings(user_id) -> dict:
     session = SessionLocal()
     try:
         row = _get_or_create(session, user_id)
@@ -68,11 +69,11 @@ def get_notification_settings(user_id: int | str) -> dict:
 
 
 def save_notification_settings(
-    user_id: int | str,
+    user_id,
     *,
-    is_enabled: bool | None = None,
-    delivery_hour: int | None = None,
-    timezone: str | None = None,
+    is_enabled=None,
+    delivery_hour=None,
+    timezone=None,
 ) -> None:
     session = SessionLocal()
     try:
@@ -92,7 +93,7 @@ def save_notification_settings(
         session.close()
 
 
-def mark_notifications_sent(user_id: int | str, delivery_date) -> None:
+def mark_notifications_sent(user_id, delivery_date) -> None:
     session = SessionLocal()
     try:
         row = _get_or_create(session, user_id)
@@ -102,7 +103,7 @@ def mark_notifications_sent(user_id: int | str, delivery_date) -> None:
         session.close()
 
 
-def list_enabled_notification_settings() -> list[NotificationSetting]:
+def list_enabled_notification_settings() -> list:
     session = SessionLocal()
     try:
         rows = (
@@ -111,7 +112,6 @@ def list_enabled_notification_settings() -> list[NotificationSetting]:
             .all()
         )
 
-        # Отсоединяем объекты перед закрытием сессии
         result = list(rows)
         for row in result:
             session.expunge(row)

@@ -1,48 +1,33 @@
-import html
 import os
 
 from telegram import Bot
+from telegram.constants import ParseMode
+
+from app.bot.ui.keyboards import get_results_keyboard
+from app.bot.ui.messages import build_results_message
 
 
-def build_notification_text(tournaments: list[dict]) -> str:
-    lines = []
-    lines.append("♟ New tournaments for your filters:")
-    lines.append("")
-
-    for tournament in tournaments[:10]:
-        name = html.escape(tournament["name"])
-        country = html.escape(tournament.get("country") or "Unknown")
-        location = html.escape(tournament.get("location") or "Unknown")
-        start_date = html.escape(tournament.get("start_date") or "Unknown date")
-        fmt = html.escape(tournament.get("format") or "Unknown format")
-        rated = "FIDE rated" if tournament.get("fide_rated") else "Not rated"
-        url = tournament.get("url")
-
-        lines.append(f"• <b>{name}</b>")
-        lines.append(f"  {country} — {location}")
-        lines.append(f"  {start_date} • {fmt} • {rated}")
-        if url:
-            lines.append(f"  <a href=\"{html.escape(url)}\">Open</a>")
-        lines.append("")
-
-    extra_count = max(0, len(tournaments) - 10)
-    if extra_count:
-        lines.append(f"And {extra_count} more tournaments matched your filters.")
-
-    return "\n".join(lines).strip()
-
-
-async def send_notification_message(chat_id: int | str, tournaments: list[dict]) -> None:
+async def send_notification_message(chat_id, tournaments, user_filters) -> None:
     token = os.getenv("BOT_TOKEN")
     if not token:
         raise RuntimeError("BOT_TOKEN is not set")
 
     bot = Bot(token=token)
-    text = build_notification_text(tournaments)
+
+    page = 0
+    results_text = build_results_message(tournaments, user_filters, page)
+    keyboard = get_results_keyboard(page, len(tournaments))
+
+    text = (
+        "🔔 <b>New tournaments for your filters</b>\n"
+        "Use the buttons below to browse pages.\n\n"
+        f"{results_text}"
+    )
 
     await bot.send_message(
         chat_id=int(chat_id),
         text=text,
-        parse_mode="HTML",
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
         disable_web_page_preview=True,
     )

@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from app.db import Base
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.ext.mutable import MutableList, MutableDict
 
 
 class User(Base):
@@ -70,8 +70,14 @@ class AppCache(Base):
 
     id = Column(Integer, primary_key=True)
     cache_key = Column(String, unique=True, nullable=False)
-    cache_value = Column(MutableList.as_mutable(JSONB), nullable=False, default=list)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    cache_value = Column(MutableDict.as_mutable(JSONB), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
 class NotificationSetting(Base):
     __tablename__ = "notification_settings"

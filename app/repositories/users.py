@@ -2,7 +2,7 @@ from app.db import SessionLocal
 from app.models import User
 
 
-def get_or_create_user(telegram_user_id: int | str, username: str | None = None) -> dict:
+def get_or_create_user(telegram_user_id, username=None) -> dict:
     session = SessionLocal()
     try:
         telegram_user_id = str(telegram_user_id)

@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
+from app.repositories.results_cache import save_results_cache
 
 from app.bot.ui.keyboards import get_main_keyboard, get_results_keyboard
 from app.bot.ui.messages import build_results_message
@@ -66,6 +67,8 @@ async def find_tournaments(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         )
         return
 
+    save_results_cache(user_id, results, user_filters)
+
     page = 0
     text = build_results_message(results, user_filters, page)
     keyboard = get_results_keyboard(page, len(results))
@@ -86,9 +89,15 @@ async def handle_results_pagination(update: Update, context: ContextTypes.DEFAUL
     await query.answer()
 
     user_id = query.from_user.id
-    user_filters = get_user_filters(user_id)
-    tournaments = load_tournaments()
-    results = filter_tournaments(tournaments, user_filters)
+    payload = get_results_cache(user_id)
+
+    if payload:
+        results = payload["results"]
+        user_filters = payload["user_filters"]
+    else:
+        user_filters = get_user_filters(user_id)
+        tournaments = load_tournaments()
+        results = filter_tournaments(tournaments, user_filters)
 
     if not results:
         await query.edit_message_text("No tournaments found for your filters.")

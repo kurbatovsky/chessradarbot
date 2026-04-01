@@ -6,7 +6,7 @@ from app.db import SessionLocal
 from app.models import NotificationDelivery
 
 
-def get_sent_tournament_ids(user_id: int | str) -> set[int]:
+def get_sent_tournament_ids(user_id) -> set:
     session = SessionLocal()
     try:
         rows = (
@@ -20,8 +20,8 @@ def get_sent_tournament_ids(user_id: int | str) -> set[int]:
 
 
 def create_delivery_records(
-    user_id: int | str,
-    tournament_ids: list[int],
+    user_id,
+    tournament_ids,
     delivery_date: date,
 ) -> None:
     if not tournament_ids:
