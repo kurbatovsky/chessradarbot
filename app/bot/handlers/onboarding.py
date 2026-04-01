@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from app.bot.handlers.country_selector import open_country_selector_in_onboarding
 from app.bot.ui.keyboards import get_onboarding_format_keyboard
+from app.repositories.user_filters import toggle_user_format, get_user_filters
 
 from app.repositories.users import (
     get_or_create_user,
@@ -87,6 +88,60 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
         )
 
         await open_country_selector_in_onboarding(query, context, user_id)
+        return True
+
+    if data.startswith("onb_format_toggle:"):
+        from app.repositories.user_filters import toggle_user_format, get_user_filters
+
+        fmt = data.split(":", 1)[1]
+        toggle_user_format(user_id, fmt)
+
+        filters = get_user_filters(user_id)
+
+        await query.edit_message_text(
+            "Step 2 of 5 — Format\n\n"
+            "Pick the formats you care about most.\n\n"
+            "You can select more than one, or skip this step.",
+            reply_markup=get_onboarding_format_keyboard(filters["formats"]),
+        )
+        return True
+
+        if data == "onb:format_continue":
+            save_onboarding_state(
+                telegram_user_id=user_id,
+                onboarding_step="choose_rated",
+                onboarding_completed=False,
+            )
+
+            await query.edit_message_text(
+                "Step 3 of 5 — Rated filter\n\n"
+                "Do you want only rated tournaments?"
+            )
+            return True
+
+    if data == "onb:format_skip":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step="choose_rated",
+            onboarding_completed=False,
+        )
+
+        await query.edit_message_text(
+            "Step 3 of 5 — Rated filter\n\n"
+            "Do you want only rated tournaments?"
+        )
+        return True
+
+    if data == "onb:exit":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step=None,
+            onboarding_completed=True,
+        )
+
+        await query.edit_message_text(
+            "👌 Setup paused. You can continue anytime from settings."
+        )
         return True
 
 async def render_onboarding_welcome_from_country(query, user_id):
