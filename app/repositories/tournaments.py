@@ -57,3 +57,35 @@ def calculate_popular_countries(limit: int = 10) -> list[str]:
         return [row[0] for row in rows if row[0]]
     finally:
         session.close()
+
+def load_tournaments_for_notifications():
+    session = SessionLocal()
+    try:
+        tournaments = (
+            session.query(Tournament)
+            .filter(Tournament.end_date >= date.today())
+            .order_by(Tournament.start_date.asc(), Tournament.id.asc())
+            .all()
+        )
+
+        result = []
+        for t in tournaments:
+            result.append(
+                {
+                    "id": t.id,
+                    "name": t.name,
+                    "location": t.location,
+                    "country": t.country,
+                    "start_date": t.start_date.isoformat() if t.start_date else None,
+                    "end_date": t.end_date.isoformat() if t.end_date else None,
+                    "format": t.format,
+                    "source": t.source,
+                    "url": t.url,
+                    "fide_rated": t.fide_rated,
+                    "entry_fee": float(t.entry_fee) if t.entry_fee is not None else None,
+                    "currency": t.currency,
+                }
+            )
+        return result
+    finally:
+        session.close()
