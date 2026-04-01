@@ -1,5 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+from app.bot.handlers.country_selector import open_country_selector_in_onboarding
+from app.bot.ui.keyboards import get_onboarding_format_keyboard
 
 from app.repositories.users import (
     get_or_create_user,
@@ -84,12 +86,41 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
             onboarding_completed=False,
         )
 
-        await query.edit_message_text(
-            "🌍 First, choose the countries you're interested in.\n\n"
-            "You can select multiple."
-        )
-
-        # 👉 дальше сюда подключим country selector (следующий шаг)
+        await open_country_selector_in_onboarding(query, context, user_id)
         return True
 
+async def render_onboarding_welcome_from_country(query, user_id):
+    save_onboarding_state(
+        telegram_user_id=user_id,
+        onboarding_step="welcome",
+        onboarding_completed=False,
+    )
+
+    await query.edit_message_text(
+        (
+            "♟ Welcome to ChessRadar\n\n"
+            "I help you find chess tournaments worldwide.\n\n"
+            "Let's quickly set things up so you only see relevant events."
+        ),
+        reply_markup=get_onboarding_welcome_keyboard(),
+    )
+
     return False
+
+async def render_format_step_after_country(query, context: ContextTypes.DEFAULT_TYPE, user_id: int):
+    from app.repositories.user_filters import get_user_filters
+
+    save_onboarding_state(
+        telegram_user_id=user_id,
+        onboarding_step="choose_format",
+        onboarding_completed=False,
+    )
+
+    filters = get_user_filters(user_id)
+
+    await query.edit_message_text(
+        "Step 2 of 5 — Format\n\n"
+        "Pick the formats you care about most.\n\n"
+        "You can select more than one, or skip this step.",
+        reply_markup=get_onboarding_format_keyboard(filters["formats"]),
+    )

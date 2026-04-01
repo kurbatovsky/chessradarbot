@@ -49,12 +49,27 @@ async def open_country_selector(update: Update, context: ContextTypes.DEFAULT_TY
     )
 
 
-async def _render_country_menu(query, context: ContextTypes.DEFAULT_TYPE, user_id: int, menu: str, page: int = 0) -> None:
+async def _render_country_menu(
+    query,
+    context: ContextTypes.DEFAULT_TYPE,
+    user_id: int,
+    menu: str,
+    page: int = 0,
+    onboarding_active: bool = False,
+) -> None:
     user_filters = get_user_filters(user_id)
     selected = user_filters["countries"]
 
     if menu == "home":
-        text = "Select countries for tournaments:"
+        if onboarding_active:
+            text = (
+                "Step 1 of 5 — Countries\n\n"
+                "Choose countries where you want to find tournaments.\n\n"
+                "You can use popular countries, browse all countries, or review selected ones."
+            )
+        else:
+            text = "Select countries for tournaments:"
+
         markup = build_country_selector_home_keyboard(selected)
 
     elif menu == "popular":
@@ -83,6 +98,19 @@ async def _render_country_menu(query, context: ContextTypes.DEFAULT_TYPE, user_i
 
     await query.edit_message_text(text=text, reply_markup=markup)
 
+async def open_country_selector_in_onboarding(query, context: ContextTypes.DEFAULT_TYPE, user_id: int) -> None:
+    context.user_data["country_menu"] = "home"
+    context.user_data["country_page"] = 0
+    context.user_data["onboarding_active"] = True
+
+    await _render_country_menu(
+        query=query,
+        context=context,
+        user_id=user_id,
+        menu="home",
+        page=0,
+        onboarding_active=True,
+    )
 
 async def handle_country_selector_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -93,6 +121,7 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
 
     user_id = query.from_user.id
     data = query.data
+    onboarding_active = bool(context.user_data.get("onboarding_active"))
 
     if data == "country_noop":
         return
@@ -104,7 +133,14 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
         current_menu = context.user_data.get("country_menu", "home")
         current_page = context.user_data.get("country_page", 0)
 
-        await _render_country_menu(query, context, user_id, current_menu, current_page)
+        await _render_country_menu(
+            query,
+            context,
+            user_id,
+            current_menu,
+            current_page,
+            onboarding_active=onboarding_active,
+        )
         return
 
     if data == "country_clear":
@@ -113,23 +149,25 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
         current_menu = context.user_data.get("country_menu", "home")
         current_page = context.user_data.get("country_page", 0)
 
-        await _render_country_menu(query, context, user_id, current_menu, current_page)
+        await _render_country_menu(
+            query,
+            context,
+            user_id,
+            current_menu,
+            current_page,
+            onboarding_active=onboarding_active,
+        )
         return
 
     if data == "country_done":
-        user_filters = get_user_filters(user_id)
-        selected = user_filters["countries"]
+        if onboarding_active:
+            from app.bot.handlers.onboarding import render_format_step_after_country
 
-        text = (
-            "Country filter set to: any"
-            if not selected
-            else "Country filter set to: " + ", ".join(
-                format_country_label(country) for country in selected
-            )
-        )
+            context.user_data["onboarding_active"] = False
+            await render_format_step_after_country(query, context, user_id)
+            return
 
-        await query.edit_message_text(text=text)
-
+        await query.edit_message_text("Country filter updated.")
         if query.message:
             await query.message.reply_text(
                 "Back to main menu.",
@@ -138,8 +176,14 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
         return
 
     if data == "country_back":
-        await query.edit_message_text("Country selection cancelled.")
+        if onboarding_active:
+            from app.bot.handlers.onboarding import render_onboarding_welcome_from_country
 
+            context.user_data["onboarding_active"] = False
+            await render_onboarding_welcome_from_country(query, user_id)
+            return
+
+        await query.edit_message_text("Country selection cancelled.")
         if query.message:
             await query.message.reply_text(
                 "Back to main menu.",
@@ -148,18 +192,18 @@ async def handle_country_selector_callback(update: Update, context: ContextTypes
         return
 
     if data == "country_menu:home":
-        await _render_country_menu(query, context, user_id, "home", 0)
+        await _render_country_menu(query, context, user_id, "home", 0, onboarding_active=onboarding_active,)
         return
 
     if data == "country_menu:popular":
-        await _render_country_menu(query, context, user_id, "popular", 0)
+        await _render_country_menu(query, context, user_id, "popular", 0, onboarding_active=onboarding_active,)
         return
 
     if data == "country_menu:selected":
-        await _render_country_menu(query, context, user_id, "selected", 0)
+        await _render_country_menu(query, context, user_id, "selected", 0, onboarding_active=onboarding_active,)
         return
 
     if data.startswith("country_menu:all:"):
         page = int(data.split(":")[-1])
-        await _render_country_menu(query, context, user_id, "all", page)
+        await _render_country_menu(query, context, user_id, "all", page, onboarding_active=onboarding_active,)
         return
