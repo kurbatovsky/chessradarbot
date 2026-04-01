@@ -10,11 +10,12 @@ COUNTRIES_PER_PAGE = 20
 
 def get_main_keyboard():
     keyboard = [
-        ["Find tournaments"],
-        ["Set format", "Set country"],
-        ["Set rated", "Show filters"],
-        ["Clear filters"],
-    ]
+    ["Find tournaments"],
+    ["Set format", "Set country"],
+    ["Set rated"],
+    ["Notifications ⚙️"], 
+    ["Show filters", "Clear filters"],
+    ]   
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
@@ -170,6 +171,21 @@ def build_selected_countries_keyboard(selected_countries: list[str]) -> InlineKe
 
     return InlineKeyboardMarkup(rows)
 
+def get_notification_keyboard(enabled: bool):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "Turn OFF ❌" if enabled else "Turn ON ✅",
+                callback_data="notif_toggle",
+            )
+        ],
+        [
+            InlineKeyboardButton("Set time ⏰", callback_data="notif_set_time"),
+        ],
+        [
+            InlineKeyboardButton("Back", callback_data="notif_back"),
+        ],
+    ])
 
 def build_country_page_keyboard(selected_countries: list[str], page: int) -> InlineKeyboardMarkup:
     total_countries = len(AVAILABLE_COUNTRIES)
@@ -241,3 +257,27 @@ def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
     ])
 
     return InlineKeyboardMarkup(rows)
+
+def get_notification_hour_keyboard(selected_hour=None):
+    rows = []
+
+    for start in range(0, 24, 4):
+        row = []
+        for hour in range(start, start + 4):
+            label = f"{hour:02d}:00"
+            if selected_hour is not None and hour == selected_hour:
+                label = f"✅ {label}"
+
+            row.append(
+                InlineKeyboardButton(
+                    label,
+                    callback_data=f"notif_hour:{hour}",
+                )
+            )
+        rows.append(row)
+
+    rows.append([
+        InlineKeyboardButton("Back", callback_data="notif_back_to_settings")
+    ])
+
+    return InlineKeyboardMarkup(rows)    

@@ -11,13 +11,9 @@ from telegram.ext import (
     filters,
 )
 
-from app.repositories.user_filters import (
-    get_user_filters,
-    save_user_filters,
-)
+from app.repositories.user_filters import save_user_filters
 from app.bot.ui.keyboards import (
     get_main_keyboard,
-    get_country_keyboard,
     get_rated_keyboard,
 )
 from app.bot.handlers.start import start
@@ -34,6 +30,10 @@ from app.bot.handlers.results import find_tournaments, handle_results_pagination
 from app.bot.handlers.country_selector import (
     open_country_selector,
     handle_country_selector_callback,
+)
+from app.bot.handlers.notifications import (
+    show_notification_settings,
+    handle_notification_callbacks,
 )
 from app.repositories.users import get_or_create_user
 
@@ -54,8 +54,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
 
     get_or_create_user(
-    telegram_user_id=update.message.from_user.id,
-    username=update.message.from_user.username,
+        telegram_user_id=update.message.from_user.id,
+        username=update.message.from_user.username,
     )
 
     user_id = update.message.from_user.id
@@ -91,6 +91,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if text == "Clear filters":
         await clear_filters(update, context)
+        return
+
+    if text == "Notifications ⚙️":
+        context.user_data["state"] = None
+        await show_notification_settings(update, context)
         return
 
     if text == "Back to menu":
@@ -158,6 +163,8 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(handle_format_back, pattern=r"^format_back$"))
 
     app.add_handler(CallbackQueryHandler(handle_results_pagination, pattern=r"^results:\d+$"))
+    app.add_handler(CallbackQueryHandler(handle_notification_callbacks, pattern=r"^notif_"))
+
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     logger.info("Bot started")
