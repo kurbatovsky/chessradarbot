@@ -17,6 +17,10 @@ from app.bot.ui.keyboards import (
     get_rated_keyboard,
 )
 from app.bot.handlers.start import start
+from app.bot.handlers.onboarding import (
+    start_onboarding,
+    handle_onboarding_callbacks,
+)
 from app.bot.handlers.filters import (
     show_filters,
     clear_filters,
@@ -46,6 +50,10 @@ logger = logging.getLogger(__name__)
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    onboarding_started = await start_onboarding(update, context)
+    if onboarding_started:
+        return
+
     await start(update, context)
 
 
@@ -149,6 +157,10 @@ def main() -> None:
     app = Application.builder().token(token).build()
 
     app.add_handler(CommandHandler("start", start_command))
+
+    app.add_handler(
+        CallbackQueryHandler(handle_onboarding_callbacks, pattern=r"^onboarding_")
+    )
 
     app.add_handler(
         CallbackQueryHandler(
