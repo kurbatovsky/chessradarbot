@@ -1,8 +1,14 @@
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 
-from app.core.constants import MAX_RESULTS
 from app.core.countries import AVAILABLE_COUNTRIES, format_country_label
 from app.core.constants import FORMAT_LABELS
+from app.core.constants import (
+    MAX_RESULTS,
+    ONBOARDING_TIMEZONE_OPTIONS,
+    EXTENDED_TIMEZONE_OPTIONS,
+    TIMEZONE_OTHER_CALLBACK,
+    TIMEZONE_BACK_TO_POPULAR_CALLBACK,
+)
 
 
 COUNTRIES_PER_PAGE = 20
@@ -279,4 +285,76 @@ def get_notification_hour_keyboard(selected_hour=None):
         InlineKeyboardButton("Back", callback_data="notif_back_to_settings")
     ])
 
-    return InlineKeyboardMarkup(rows)    
+    return InlineKeyboardMarkup(rows)
+
+def get_notification_timezone_keyboard(selected_timezone=None, back_callback="notif_back_to_settings"):
+    rows = []
+    current_row = []
+
+    for label, tz in ONBOARDING_TIMEZONE_OPTIONS:
+        display = label
+        if selected_timezone == tz:
+            display = "✅ %s" % label
+
+        current_row.append(
+            InlineKeyboardButton(
+                display,
+                callback_data="notif_timezone:%s" % tz,
+            )
+        )
+
+        if len(current_row) == 2:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    rows.append([
+        InlineKeyboardButton(
+            "Other time zones",
+            callback_data="notif_timezone:%s" % TIMEZONE_OTHER_CALLBACK,
+        )
+    ])
+
+    rows.append([
+        InlineKeyboardButton("Back", callback_data=back_callback)
+    ])
+
+    return InlineKeyboardMarkup(rows)
+
+def get_extended_notification_timezone_keyboard(selected_timezone=None, back_callback="notif_back_to_settings"):
+    rows = []
+    current_row = []
+
+    for label, tz in EXTENDED_TIMEZONE_OPTIONS:
+        display = label
+        if selected_timezone == tz:
+            display = "✅ %s" % label
+
+        current_row.append(
+            InlineKeyboardButton(
+                display,
+                callback_data="notif_timezone:%s" % tz,
+            )
+        )
+
+        if len(current_row) == 2:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    rows.append([
+        InlineKeyboardButton(
+            "⬅ Popular time zones",
+            callback_data="notif_timezone:%s" % TIMEZONE_BACK_TO_POPULAR_CALLBACK,
+        )
+    ])
+
+    rows.append([
+        InlineKeyboardButton("Back", callback_data=back_callback)
+    ])
+
+    return InlineKeyboardMarkup(rows)
