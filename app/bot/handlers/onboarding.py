@@ -63,8 +63,8 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
     data = query.data
     user_id = query.from_user.id
 
-    if not data.startswith("onboarding_"):
-        return False
+    if not (data.startswith("onboarding_") or data.startswith("onb_") or data.startswith("onb:")):
+        return False    
 
     await query.answer()
 
@@ -106,18 +106,18 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
         )
         return True
 
-        if data == "onb:format_continue":
-            save_onboarding_state(
-                telegram_user_id=user_id,
-                onboarding_step="choose_rated",
-                onboarding_completed=False,
-            )
+    if data == "onb:format_continue":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step="choose_rated",
+            onboarding_completed=False,
+        )
 
-            await query.edit_message_text(
-                "Step 3 of 5 — Rated filter\n\n"
-                "Do you want only rated tournaments?"
-            )
-            return True
+        await query.edit_message_text(
+            "Step 3 of 5 — Rated filter\n\n"
+            "Do you want only rated tournaments?"
+        )
+        return True
 
     if data == "onb:format_skip":
         save_onboarding_state(
@@ -143,6 +143,8 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
             "👌 Setup paused. You can continue anytime from settings."
         )
         return True
+
+    return False
 
 async def render_onboarding_welcome_from_country(query, user_id):
     save_onboarding_state(
