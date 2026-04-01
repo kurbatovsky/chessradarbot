@@ -1,13 +1,15 @@
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
-from app.repositories.results_cache import save_results_cache
+from app.repositories.results_cache import save_results_cache, get_results_cache
 
 from app.bot.ui.keyboards import get_main_keyboard, get_results_keyboard
 from app.bot.ui.messages import build_results_message
 from app.repositories.tournaments import load_tournaments
 from app.repositories.user_filters import get_user_filters
 from app.services.tournament_service import filter_tournaments
+
+
 
 
 def has_active_filters(user_filters: dict) -> bool:
