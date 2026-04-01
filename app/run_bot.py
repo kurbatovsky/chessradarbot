@@ -159,7 +159,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start_command))
 
     app.add_handler(
-        CallbackQueryHandler(handle_onboarding_callbacks, pattern=r"^(onboarding_|onb_)")
+        CallbackQueryHandler(handle_onboarding_callbacks, pattern=r"^onboarding_|^onb[_:]")
     )
 
     app.add_handler(
