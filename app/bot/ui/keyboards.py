@@ -11,8 +11,7 @@ COUNTRIES_PER_PAGE = 20
 def get_main_keyboard():
     keyboard = [
     ["Find tournaments"],
-    ["Set format", "Set country"],
-    ["Set rated"],
+    ["Set format", "Set country", "Set rated"],
     ["Notifications ⚙️"], 
     ["Show filters", "Clear filters"],
     ]   
