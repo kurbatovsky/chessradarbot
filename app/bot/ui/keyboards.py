@@ -186,6 +186,7 @@ def get_notification_keyboard(enabled: bool):
         ],
         [
             InlineKeyboardButton("Set time ⏰", callback_data="notif_set_time"),
+            InlineKeyboardButton("Set timezone 🌍", callback_data="notif_set_timezone"),
         ],
         [
             InlineKeyboardButton("Back", callback_data="notif_back"),
@@ -263,7 +264,7 @@ def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(rows)
 
-def get_notification_hour_keyboard(selected_hour=None):
+def get_notification_hour_keyboard(selected_hour=None, back_callback="notif_back_to_settings"):
     rows = []
 
     for start in range(0, 24, 4):
@@ -282,7 +283,7 @@ def get_notification_hour_keyboard(selected_hour=None):
         rows.append(row)
 
     rows.append([
-        InlineKeyboardButton("Back", callback_data="notif_back_to_settings")
+        InlineKeyboardButton("Back", callback_data=back_callback)
     ])
 
     return InlineKeyboardMarkup(rows)
