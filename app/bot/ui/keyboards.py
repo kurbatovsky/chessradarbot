@@ -394,3 +394,41 @@ def get_extended_notification_timezone_keyboard(selected_timezone=None, back_cal
     ])
 
     return InlineKeyboardMarkup(rows)
+
+def get_onboarding_rated_keyboard(current_value):
+    # current_value: True / False / None
+
+    def label(text, active):
+        return ("✅ " if active else "☑️ ") + text
+
+    rows = [
+        [
+            InlineKeyboardButton(
+                label("Any", current_value is False),
+                callback_data="onb_rated:any",
+            ),
+            InlineKeyboardButton(
+                label("Rated only", current_value is True),
+                callback_data="onb_rated:rated",
+            ),
+        ],
+        [
+            InlineKeyboardButton("Continue", callback_data="onb:rated_continue"),
+        ],
+        [
+            InlineKeyboardButton("Skip", callback_data="onb:rated_skip"),
+            InlineKeyboardButton("Exit for now", callback_data="onb:exit"),
+        ],
+    ]
+
+    return InlineKeyboardMarkup(rows)
+
+def get_onboarding_notifications_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔔 Enable notifications", callback_data="onb:notif_enable"),
+        ],
+        [
+            InlineKeyboardButton("Skip", callback_data="onb:notif_skip"),
+        ],
+    ])

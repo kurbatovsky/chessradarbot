@@ -3,6 +3,12 @@ from telegram.ext import ContextTypes
 from app.bot.handlers.country_selector import open_country_selector_in_onboarding
 from app.bot.ui.keyboards import get_onboarding_format_keyboard
 from app.repositories.user_filters import toggle_user_format, get_user_filters
+from app.bot.ui.keyboards import get_onboarding_rated_keyboard
+from app.repositories.user_filters import save_user_filters
+from app.bot.ui.keyboards import get_main_keyboard
+from app.bot.handlers.results import find_tournaments
+from app.bot.ui.keyboards import get_onboarding_notifications_keyboard
+from app.bot.handlers.notifications import show_notification_settings
 
 from app.repositories.users import (
     get_or_create_user,
@@ -107,28 +113,38 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
         return True
 
     if data == "onb:format_continue":
+        from app.repositories.user_filters import get_user_filters
+
         save_onboarding_state(
             telegram_user_id=user_id,
             onboarding_step="choose_rated",
             onboarding_completed=False,
         )
 
+        filters = get_user_filters(user_id)
+
         await query.edit_message_text(
             "Step 3 of 5 — Rated filter\n\n"
-            "Do you want only rated tournaments?"
+            "Do you want only rated tournaments?",
+            reply_markup=get_onboarding_rated_keyboard(filters.get("rated_only")),
         )
         return True
 
     if data == "onb:format_skip":
+        from app.repositories.user_filters import get_user_filters
+
         save_onboarding_state(
             telegram_user_id=user_id,
             onboarding_step="choose_rated",
             onboarding_completed=False,
         )
 
+        filters = get_user_filters(user_id)
+
         await query.edit_message_text(
             "Step 3 of 5 — Rated filter\n\n"
-            "Do you want only rated tournaments?"
+            "Do you want only rated tournaments?",
+            reply_markup=get_onboarding_rated_keyboard(filters.get("rated_only")),
         )
         return True
 
@@ -141,6 +157,82 @@ async def handle_onboarding_callbacks(update: Update, context: ContextTypes.DEFA
 
         await query.edit_message_text(
             "👌 Setup paused. You can continue anytime from settings."
+        )
+        return True
+
+    if data.startswith("onb_rated:"):
+
+        value = data.split(":", 1)[1]
+        if value == "any":
+            save_user_filters(user_id, rated_only=False)
+        elif value == "rated":
+            save_user_filters(user_id, rated_only=True)
+
+        from app.repositories.user_filters import get_user_filters
+        filters = get_user_filters(user_id)
+
+        await query.edit_message_text(
+            "Step 3 of 5 — Rated filter\n\n"
+            "Do you want only rated tournaments?",
+            reply_markup=get_onboarding_rated_keyboard(filters.get("rated_only")),
+        )
+        return True
+
+    if data == "onb:rated_continue" or data == "onb:rated_skip":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step="finish",
+            onboarding_completed=False,
+        )
+
+        await query.edit_message_text(
+            "Step 4 of 5 — Ready 🚀\n\n"
+            "You're all set!\n\n"
+            "Let's find your first tournaments.",
+            reply_markup=get_onboarding_finish_keyboard(),
+        )
+        return True
+
+    if data == "onb:search":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step=None,
+            onboarding_completed=True,
+        )
+
+        context.user_data["onboarding_active"] = False
+
+        await query.message.reply_text(
+            "🔍 Searching tournaments...",
+            reply_markup=get_main_keyboard(),
+        )
+
+        await find_tournaments(update, context)
+
+        await query.message.reply_text(
+            "🔔 Stay updated\n\n"
+            "Want to receive new tournaments automatically?\n\n"
+            "We’ll send you updates based on your filters.",
+            reply_markup=get_onboarding_notifications_keyboard(),
+        )
+
+        return True
+
+    if data == "onb:notif_enable":
+        # просто открываем существующий экран настроек
+        await show_notification_settings(update, context)
+        return True
+
+    if data == "onb:notif_skip":
+        save_onboarding_state(
+            telegram_user_id=user_id,
+            onboarding_step=None,
+            onboarding_completed=True,
+        )
+
+        await query.edit_message_text(
+            "👌 You're all set!\n\n"
+            "You can enable notifications anytime from settings."
         )
         return True
 
@@ -181,3 +273,13 @@ async def render_format_step_after_country(query, context: ContextTypes.DEFAULT_
         "You can select more than one, or skip this step.",
         reply_markup=get_onboarding_format_keyboard(filters["formats"]),
     )
+
+def get_onboarding_finish_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔍 Find tournaments", callback_data="onb:search"),
+        ],
+        [
+            InlineKeyboardButton("Exit", callback_data="onb:exit"),
+        ],
+    ])
