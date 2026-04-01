@@ -264,6 +264,41 @@ def build_format_keyboard(selected_formats: list[str]) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(rows)
 
+def get_onboarding_format_keyboard(selected_formats):
+    all_formats = ["standard", "rapid", "blitz"]
+
+    rows = []
+    current_row = []
+
+    for fmt in all_formats:
+        is_selected = fmt in selected_formats
+        prefix = "✅" if is_selected else "☑️"
+        label = f"{prefix} {FORMAT_LABELS[fmt]}"
+
+        current_row.append(
+            InlineKeyboardButton(
+                text=label,
+                callback_data=f"onb_format_toggle:{fmt}",
+            )
+        )
+
+        if len(current_row) == 2:
+            rows.append(current_row)
+            current_row = []
+
+    if current_row:
+        rows.append(current_row)
+
+    rows.append([
+        InlineKeyboardButton("Continue", callback_data="onb:format_continue"),
+    ])
+    rows.append([
+        InlineKeyboardButton("Skip", callback_data="onb:format_skip"),
+        InlineKeyboardButton("Exit for now", callback_data="onb:exit"),
+    ])
+
+    return InlineKeyboardMarkup(rows)
+
 def get_notification_hour_keyboard(selected_hour=None, back_callback="notif_back_to_settings"):
     rows = []
 
